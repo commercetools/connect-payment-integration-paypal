@@ -1,4 +1,4 @@
-import { PaymentOutcome, PaymentRequestSchemaDTO } from '../../dtos/mock-payment.dto';
+import { PaymentOutcome, PaymentRequestSchemaDTO } from '../../dtos/paypal-payment.dto';
 
 export type CreatePayment = {
   data: PaymentRequestSchemaDTO;
@@ -8,7 +8,7 @@ export type CreatePaymentRequest = {
   data: PaymentRequestSchemaDTO;
 };
 
-export type MockPaymentProviderResponse = {
+export type PaypalPaymentProviderResponse = {
   resultCode: PaymentOutcome;
   pspReference: string;
   paymentMethodType: string;

@@ -1,5 +1,5 @@
 import { CommercetoolsCartService, CommercetoolsPaymentService } from '@commercetools/connect-payments-sdk';
-import { PaymentOutcome, PaymentRequestSchemaDTO } from '../../dtos/mock-payment.dto';
+import { PaymentOutcome, PaymentRequestSchemaDTO } from '../../dtos/paypal-payment.dto';
 import { ConfigResponseSchemaDTO } from '../../dtos/operations/config.dto';
 import { SupportedPaymentComponentsSchemaDTO } from '../../dtos/operations/payment-componets.dto';
 import {
