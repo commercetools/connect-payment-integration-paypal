@@ -16,8 +16,8 @@ const packageJSON = require('../../../package.json');
 export class PaypalOperationProcessor implements OperationProcessor {
   async config(): Promise<ConfigResponse> {
     return {
-      clientKey: config.mockClientKey,
-      environment: config.mockEnvironment,
+      clientId: config.paypalClientId,
+      environment: config.paypalEnvironment,
     };
   }
 

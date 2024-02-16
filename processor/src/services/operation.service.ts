@@ -37,7 +37,7 @@ export class DefaultOperationService implements OperationService {
     return {
       components: [
         {
-          type: 'card',
+          type: 'paypal',
         },
       ],
     };

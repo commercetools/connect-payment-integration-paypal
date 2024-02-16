@@ -14,8 +14,9 @@ export const config = {
   loggerLevel: process.env.LOGGER_LEVEL || 'info',
 
   // Update with specific payment providers config
-  mockClientKey: process.env.MOCK_CLIENT_KEY,
-  mockEnvironment: process.env.MOCK_ENVIRONMENT,
+  paypalClientId: process.env.PAYPAL_CLIENT_ID || 'xxx',
+  paypalClientSecret: process.env.PAYPAL_CLIENT_SECRET || 'xxxx',
+  paypalEnvironment: process.env.PAYPAL_ENVIRONMENT || 'test',
 
   // Payment Providers config
   returnUrl: process.env.RETURN_URL,

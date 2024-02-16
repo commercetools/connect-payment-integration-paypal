@@ -42,7 +42,8 @@ export type PaymentProviderModificationResponse = {
 };
 
 export type ConfigResponse = {
-  [key: string]: any;
+  clientId: string;
+  environment: string;
 };
 
 export type StatusResponse = StatusResponseSchemaDTO;
