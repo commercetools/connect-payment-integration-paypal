@@ -11,11 +11,11 @@ declare global {
   }
 }
 
-export class MockPaymentEnabler implements PaymentEnabler {
+export class PaypalPaymentEnabler implements PaymentEnabler {
   setupData: Promise<{ baseOptions: BaseOptions }>;
 
-  constructor(options: EnablerOptions) {
-    this.setupData = MockPaymentEnabler._Setup(options);
+  private constructor(options: EnablerOptions) {
+    this.setupData = PaypalPaymentEnabler._Setup(options);
   }
 
   private static _Setup = async (options: EnablerOptions): Promise<{ baseOptions: BaseOptions }> => {
