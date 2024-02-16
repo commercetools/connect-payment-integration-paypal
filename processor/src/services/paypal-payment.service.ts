@@ -1,21 +1,21 @@
 import { CommercetoolsCartService, CommercetoolsPaymentService } from '@commercetools/connect-payments-sdk';
-import { PaymentOutcome, PaymentResponseSchemaDTO } from '../dtos/mock-payment.dto';
+import { PaymentOutcome, PaymentResponseSchemaDTO } from '../dtos/paypal-payment.dto';
 
 import { randomUUID } from 'crypto';
 import { getCartIdFromContext } from '../libs/fastify/context/context';
-import { CreatePayment } from './types/mock-payment.type';
+import { CreatePayment } from './types/paypal-payment.type';
 
-export type MockPaymentServiceOptions = {
+export type PaypalPaymentServiceOptions = {
   ctCartService: CommercetoolsCartService;
   ctPaymentService: CommercetoolsPaymentService;
 };
 
-export class MockPaymentService {
+export class PaypalPaymentService {
   private ctCartService: CommercetoolsCartService;
   private ctPaymentService: CommercetoolsPaymentService;
   private allowedCreditCards = ['4111111111111111', '5555555555554444', '341925950237632'];
 
-  constructor(opts: MockPaymentServiceOptions) {
+  constructor(opts: PaypalPaymentServiceOptions) {
     this.ctCartService = opts.ctCartService;
     this.ctPaymentService = opts.ctPaymentService;
   }
@@ -34,7 +34,7 @@ export class MockPaymentService {
         cart: ctCart,
       }),
       paymentMethodInfo: {
-        paymentInterface: 'mock',
+        paymentInterface: 'paypal',
       },
       ...(ctCart.customerId && {
         customer: {

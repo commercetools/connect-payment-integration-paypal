@@ -5,11 +5,11 @@ import {
   PaymentRequestSchemaDTO,
   PaymentResponseSchema,
   PaymentResponseSchemaDTO,
-} from '../dtos/mock-payment.dto';
-import { MockPaymentService } from '../services/mock-payment.service';
+} from '../dtos/paypal-payment.dto';
+import { PaypalPaymentService } from '../services/paypal-payment.service';
 
 type PaymentRoutesOptions = {
-  paymentService: MockPaymentService;
+  paymentService: PaypalPaymentService;
   sessionAuthHook: SessionAuthenticationHook;
 };
 
