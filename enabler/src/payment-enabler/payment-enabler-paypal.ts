@@ -14,7 +14,7 @@ declare global {
 export class PaypalPaymentEnabler implements PaymentEnabler {
   setupData: Promise<{ baseOptions: BaseOptions }>;
 
-  private constructor(options: EnablerOptions) {
+  constructor(options: EnablerOptions) {
     this.setupData = PaypalPaymentEnabler._Setup(options);
   }
 
