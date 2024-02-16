@@ -13,7 +13,7 @@ import {
 import { OperationProcessor } from './operation.processor';
 const packageJSON = require('../../../package.json');
 
-export class MockOperationProcessor implements OperationProcessor {
+export class PaypalOperationProcessor implements OperationProcessor {
   async config(): Promise<ConfigResponse> {
     return {
       clientKey: config.mockClientKey,
@@ -34,7 +34,7 @@ export class MockOperationProcessor implements OperationProcessor {
           try {
             const paymentMethods = 'card';
             return {
-              name: 'Mock Payment API',
+              name: 'Paypal Payment API',
               status: 'UP',
               data: {
                 paymentMethods,
@@ -42,7 +42,7 @@ export class MockOperationProcessor implements OperationProcessor {
             };
           } catch (e) {
             return {
-              name: 'Mock Payment API',
+              name: 'Paypal Payment API',
               status: 'DOWN',
               data: {
                 // TODO do not expose the error

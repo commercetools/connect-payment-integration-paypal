@@ -1,3 +1,3 @@
-import { MockPaymentEnabler } from './payment-enabler/payment-enabler-mock';
+import { PaypalPaymentEnabler } from './payment-enabler/payment-enabler-paypal';
 
-export { MockPaymentEnabler as Enabler };
+export { PaypalPaymentEnabler as Enabler };

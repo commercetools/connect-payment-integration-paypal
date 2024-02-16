@@ -2,10 +2,10 @@ import { FastifyInstance } from 'fastify';
 import { paymentSDK } from '../../payment-sdk';
 import { operationsRoute } from '../../routes/operation.route';
 import { DefaultOperationService } from '../../services/operation.service';
-import { MockOperationProcessor } from '../../services/processors/mock-operation.processor';
+import { PaypalOperationProcessor } from '../../services/processors/paypal-operation.processor';
 
 export default async function (server: FastifyInstance) {
-  const paymentProcessor = new MockOperationProcessor();
+  const paymentProcessor = new PaypalOperationProcessor();
 
   const operationService = new DefaultOperationService({
     ctCartService: paymentSDK.ctCartService,
