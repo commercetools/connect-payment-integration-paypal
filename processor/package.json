@@ -1,7 +1,7 @@
 {
-  "name": "payment-integration-template",
+  "name": "paypal-payment-integration",
   "version": "1.0.0",
-  "description": "Payment provider integration template",
+  "description": "Paypal Payment integration",
   "main": "dist/server.js",
   "scripts": {
     "start": "node dist/main.js",
