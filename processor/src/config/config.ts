@@ -26,3 +26,7 @@ export const config = {
   // enableStoreDetails: process.env.ENABLE_STORE_DETAILS === 'true' ? true : false,
   // sellerReturnUrl: process.env.SELLER_RETURN_URL || ''
 };
+
+export const getConfig = () => {
+  return config;
+};
