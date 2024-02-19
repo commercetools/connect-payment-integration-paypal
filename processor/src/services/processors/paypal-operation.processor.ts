@@ -11,6 +11,7 @@ import {
   StatusResponse,
 } from '../types/operation.type';
 import { OperationProcessor } from './operation.processor';
+import { PaypalPaymentAPI } from '../api/api';
 const packageJSON = require('../../../package.json');
 
 export class PaypalOperationProcessor implements OperationProcessor {
@@ -22,31 +23,37 @@ export class PaypalOperationProcessor implements OperationProcessor {
   }
 
   async status(): Promise<StatusResponse> {
+    const paypalAPI = new PaypalPaymentAPI();
     const handler = await statusHandler({
       timeout: config.healthCheckTimeout,
       checks: [
         healthCheckCommercetoolsPermissions({
-          requiredPermissions: ['manage_project'],
+          requiredPermissions: ['manage_project', 'manage_checkout_payment_intents'],
           ctAuthorizationService: paymentSDK.ctAuthorizationService,
           projectKey: config.projectKey,
         }),
         async () => {
           try {
-            const paymentMethods = 'card';
-            return {
-              name: 'Paypal Payment API',
-              status: 'UP',
-              data: {
-                paymentMethods,
-              },
-            };
+            const healthCheck = await paypalAPI.healthCheck();
+            if (healthCheck?.status === 200) {
+              const paymentMethods = 'paypal';
+              return {
+                name: 'Paypal Payment API',
+                status: 'UP',
+                details: {
+                  paymentMethods,
+                },
+              };
+            } else {
+              throw new Error(healthCheck?.data?.message);
+            }
           } catch (e) {
             return {
               name: 'Paypal Payment API',
               status: 'DOWN',
-              data: {
+              details: {
                 // TODO do not expose the error
-                error: e,
+                error: (e as Error)?.message,
               },
             };
           }
