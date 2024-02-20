@@ -1,5 +1,5 @@
 import { CommercetoolsCartService, CommercetoolsPaymentService } from '@commercetools/connect-payments-sdk';
-import { PaymentOutcome, PaymentRequestSchemaDTO } from '../../dtos/paypal-payment.dto';
+import { PaymentOutcome } from '../../dtos/paypal-payment.dto';
 import { ConfigResponseSchemaDTO } from '../../dtos/operations/config.dto';
 import { SupportedPaymentComponentsSchemaDTO } from '../../dtos/operations/payment-componets.dto';
 import {
@@ -11,10 +11,6 @@ import {
 import { StatusResponseSchemaDTO } from '../../dtos/operations/status.dto';
 import { OperationProcessor } from '../processors/operation.processor';
 import { Payment } from '@commercetools/platform-sdk';
-
-export type CreatePaymentRequest = {
-  data: PaymentRequestSchemaDTO;
-};
 
 export type CapturePaymentRequest = {
   amount: AmountSchemaDTO;
@@ -41,10 +37,7 @@ export type PaymentProviderModificationResponse = {
   pspReference: string;
 };
 
-export type ConfigResponse = {
-  clientId: string;
-  environment: string;
-};
+export type ConfigResponse = ConfigResponseSchemaDTO;
 
 export type StatusResponse = StatusResponseSchemaDTO;
 
