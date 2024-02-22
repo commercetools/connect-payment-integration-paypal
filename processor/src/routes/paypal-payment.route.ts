@@ -13,6 +13,7 @@ type PaymentRoutesOptions = {
   sessionAuthHook: SessionAuthenticationHook;
 };
 
+// TODO: this would contain the endpoints for creating and confirming a payment intent. IN our case, /payment-intent and /payment-intent/confirm
 export const paymentRoutes = async (fastify: FastifyInstance, opts: FastifyPluginOptions & PaymentRoutesOptions) => {
   fastify.post<{ Body: PaymentRequestSchemaDTO; Reply: PaymentResponseSchemaDTO }>(
     '/payments',

@@ -15,6 +15,11 @@ import { PaypalPaymentAPI } from '../api/api';
 const packageJSON = require('../../../package.json');
 
 export class PaypalOperationProcessor implements OperationProcessor {
+  private paypalClient: PaypalPaymentAPI;
+  constructor() {
+    this.paypalClient = new PaypalPaymentAPI();
+  }
+
   async config(): Promise<ConfigResponse> {
     return {
       clientId: config.paypalClientId,
@@ -23,7 +28,6 @@ export class PaypalOperationProcessor implements OperationProcessor {
   }
 
   async status(): Promise<StatusResponse> {
-    const paypalAPI = new PaypalPaymentAPI();
     const handler = await statusHandler({
       timeout: config.healthCheckTimeout,
       checks: [
@@ -34,7 +38,7 @@ export class PaypalOperationProcessor implements OperationProcessor {
         }),
         async () => {
           try {
-            const healthCheck = await paypalAPI.healthCheck();
+            const healthCheck = await this.paypalClient.healthCheck();
             if (healthCheck?.status === 200) {
               const paymentMethods = 'paypal';
               return {
@@ -70,14 +74,27 @@ export class PaypalOperationProcessor implements OperationProcessor {
   }
 
   async capturePayment(request: CapturePaymentRequest): Promise<PaymentProviderModificationResponse> {
-    return { outcome: PaymentModificationStatus.APPROVED, pspReference: request.payment.interfaceId as string };
+    return await this.paypalClient.captureOrder(request.payment.interfaceId);
   }
 
   async cancelPayment(request: CancelPaymentRequest): Promise<PaymentProviderModificationResponse> {
-    return { outcome: PaymentModificationStatus.APPROVED, pspReference: request.payment.interfaceId as string };
+    return {
+      outcome: PaymentModificationStatus.REJECTED,
+      pspReference: `${request.payment.interfaceId} operation not supported`,
+    };
   }
 
   async refundPayment(request: RefundPaymentRequest): Promise<PaymentProviderModificationResponse> {
-    return { outcome: PaymentModificationStatus.APPROVED, pspReference: request.payment.interfaceId as string };
+    const transaction = request.payment.transactions.find((t) => t.type === 'Charge' && t.state === 'Success');
+    const captureId = transaction?.interactionId;
+    if (this.isPartialRefund(request)) {
+      return this.paypalClient.refundPartialPayment(captureId, request.amount);
+    }
+
+    return this.paypalClient.refundFullPayment(captureId);
+  }
+
+  private isPartialRefund(request: RefundPaymentRequest): boolean {
+    return request.payment.amountPlanned.centAmount > request.amount.centAmount;
   }
 }
