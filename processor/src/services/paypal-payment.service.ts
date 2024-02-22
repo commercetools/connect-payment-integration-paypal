@@ -7,6 +7,7 @@ import { PaypalPaymentAPI } from './api/api';
 import { Address, Cart, Money } from '@commercetools/platform-sdk';
 import { CreateOrderRequest, PaypalShipping, parseAmount } from './types/paypal-api.type';
 import { PaymentModificationStatus } from '../dtos/operations/payment-intents.dto';
+import { randomUUID } from 'crypto';
 
 export type PaypalPaymentServiceOptions = {
   ctCartService: CommercetoolsCartService;
@@ -106,7 +107,7 @@ export class PaypalPaymentService {
       intent: 'CAPTURE',
       purchase_units: [
         {
-          reference_id: 'ct-connect-paypal-' + crypto.randomUUID(),
+          reference_id: 'ct-connect-paypal-' + randomUUID(),
           invoice_id: cart.id,
           amount: {
             currency_code: amount.currencyCode,

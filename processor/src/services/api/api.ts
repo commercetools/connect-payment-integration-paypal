@@ -12,6 +12,7 @@ import {
 import axios, { AxiosError, AxiosResponse } from 'axios';
 import { ErrorGeneral } from '@commercetools/connect-payments-sdk';
 import { Money } from '@commercetools/platform-sdk';
+import { randomUUID } from 'crypto';
 
 export class PaypalPaymentAPI implements IPaypalPaymentAPI {
   async healthCheck(): Promise<AxiosResponse | undefined> {
@@ -43,7 +44,7 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'PayPal-Request-Id': crypto.randomUUID(), // required for idempotency BY PAYPAL
+          'PayPal-Request-Id': randomUUID(), // required for idempotency BY PAYPAL
           'PayPal-Partner-Attribution-Id': 'commercetools_Cart_Checkout',
           Authorization: `Bearer ${auth.accessToken}`,
         },
@@ -77,7 +78,7 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'PayPal-Request-Id': crypto.randomUUID(), // required for idempotency BY PAYPAL
+          'PayPal-Request-Id': randomUUID(), // required for idempotency BY PAYPAL
           'PayPal-Partner-Attribution-Id': 'commercetools_Cart_Checkout',
           Authorization: `Bearer ${auth.accessToken}`,
         },
@@ -114,7 +115,7 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'PayPal-Request-Id': crypto.randomUUID(), // required for idempotency BY PAYPAL
+          'PayPal-Request-Id': randomUUID(), // required for idempotency BY PAYPAL
           'PayPal-Partner-Attribution-Id': 'commercetools_Cart_Checkout',
           Authorization: `Bearer ${auth.accessToken}`,
         },
@@ -149,7 +150,7 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'PayPal-Request-Id': crypto.randomUUID(), // required for idempotency BY PAYPAL
+          'PayPal-Request-Id': randomUUID(), // required for idempotency BY PAYPAL
           'PayPal-Partner-Attribution-Id': 'commercetools_Cart_Checkout',
           Authorization: `Bearer ${auth.accessToken}`,
         },
