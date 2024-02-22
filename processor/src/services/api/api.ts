@@ -36,7 +36,6 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
 
   async createOrder(payload: CreateOrderRequest): Promise<PaymentProviderModificationResponse> {
     const url = this.buildResourceUrl(config.paypalEnvironment, PaypalUrls.ORDERS);
-    let correlationId: string | undefined;
     try {
       const auth = await this.authenticateRequest();
       const options = {
@@ -52,20 +51,18 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
       };
 
       const response = await axios(options);
-      correlationId = response?.headers['paypal-debug-id'];
       return {
         outcome: PaymentModificationStatus.APPROVED,
         pspReference: response.data.id,
       };
     } catch (e) {
-      const errorData = (e as AxiosError).response?.data;
+      const errorData: any = (e as AxiosError).response?.data;
       throw new ErrorGeneral('not able to create a paypal order', {
         fields: {
-          payPalCorrelationId: correlationId,
+          payPalCorrelationId: errorData?.debug_id,
           url,
           apiError: errorData ? JSON.stringify(errorData) : 'not able to create a paypal order',
         },
-        skipLog: false,
         cause: e,
       });
     }
@@ -73,7 +70,6 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
 
   async captureOrder(resourceId: string | undefined): Promise<PaymentProviderModificationResponse> {
     const url = this.buildResourceUrl(config.paypalEnvironment, PaypalUrls.ORDERS_CAPTURE, resourceId);
-    let correlationId: string | undefined;
     try {
       const auth = await this.authenticateRequest();
       const options = {
@@ -88,18 +84,16 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
       };
 
       const response = await axios(options);
-      correlationId = response?.headers['paypal-debug-id'];
 
       return this.convertCaptureOrderResponse(response.data);
     } catch (e) {
-      const errorData = (e as AxiosError).response?.data;
+      const errorData: any = (e as AxiosError).response?.data;
       throw new ErrorGeneral('not able to capture the paypal order', {
         fields: {
-          payPalCorrelationId: correlationId,
+          payPalCorrelationId: errorData?.debug_id,
           url,
           apiError: errorData ? JSON.stringify(errorData) : 'not able to capture the paypal order',
         },
-        skipLog: false,
         cause: e,
       });
     }
@@ -110,7 +104,6 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
     payload: AmountSchemaDTO,
   ): Promise<PaymentProviderModificationResponse> {
     const url = this.buildResourceUrl(config.paypalEnvironment, PaypalUrls.ORDERS_REFUND, paymentReference);
-    let correlationId: string | undefined;
 
     const data = this.convertToPaypalAmount(payload);
 
@@ -129,20 +122,18 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
       };
 
       const response = await axios(options);
-      correlationId = response?.headers['paypal-debug-id'];
       return {
         outcome: PaymentModificationStatus.APPROVED,
         pspReference: response.data.id,
       };
     } catch (e) {
-      const errorData = (e as AxiosError).response?.data;
+      const errorData: any = (e as AxiosError).response?.data;
       throw new ErrorGeneral('not able to partially refund a payment', {
         fields: {
-          payPalCorrelationId: correlationId,
+          payPalCorrelationId: errorData?.debug_id,
           url,
           apiError: errorData ? JSON.stringify(errorData) : 'not able to partially refund a payment',
         },
-        skipLog: false,
         cause: e,
       });
     }
@@ -150,7 +141,6 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
 
   async refundFullPayment(paymentReference: string | undefined): Promise<PaymentProviderModificationResponse> {
     const url = this.buildResourceUrl(config.paypalEnvironment, PaypalUrls.ORDERS_REFUND, paymentReference);
-    let correlationId: string | undefined;
 
     try {
       const auth = await this.authenticateRequest();
@@ -166,20 +156,18 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
       };
 
       const response = await axios(options);
-      correlationId = response?.headers['paypal-debug-id'];
       return {
         outcome: PaymentModificationStatus.APPROVED,
         pspReference: response.data.id,
       };
     } catch (e) {
-      const errorData = (e as AxiosError).response?.data;
+      const errorData: any = (e as AxiosError).response?.data;
       throw new ErrorGeneral('not able to fully refund a payment', {
         fields: {
-          payPalCorrelationId: correlationId,
+          payPalCorrelationId: errorData?.debug_id,
           url,
           apiError: errorData ? JSON.stringify(errorData) : 'not able to fully refund a payment',
         },
-        skipLog: false,
         cause: e,
       });
     }

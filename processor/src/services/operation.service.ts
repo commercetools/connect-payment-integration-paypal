@@ -70,6 +70,7 @@ export class DefaultOperationService implements OperationService {
 
     const res = await this.processPaymentModification(updatedPayment, transactionType, requestAmount);
 
+    // TODO: if we throw an error in any of the calls within processPaymentModification, we never get to update this transsaction state to Failure below
     await this.ctPaymentService.updatePayment({
       id: ctPayment.id,
       transaction: {
