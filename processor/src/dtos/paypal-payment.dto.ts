@@ -10,6 +10,13 @@ export const PaymentRequestSchema = Type.Object({
   paymentMethod: Type.Composite([PaypalPaymentMethodSchema]),
 });
 
+export const PaymentConfirmationRequestSchema = Type.Object({
+  details: Type.Object({
+    pspReference: Type.String(),
+    paymentReference: Type.String(),
+  }),
+});
+
 export enum PaymentOutcome {
   AUTHORIZED = 'Authorized',
   REJECTED = 'Rejected',
@@ -23,4 +30,5 @@ export const PaymentResponseSchema = Type.Object({
 });
 
 export type PaymentRequestSchemaDTO = Static<typeof PaymentRequestSchema>;
+export type PaymentConfirmRequestSchemaDTO = Static<typeof PaymentConfirmationRequestSchema>;
 export type PaymentResponseSchemaDTO = Static<typeof PaymentResponseSchema>;

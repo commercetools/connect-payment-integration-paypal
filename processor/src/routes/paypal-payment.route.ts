@@ -1,19 +1,21 @@
 import { SessionAuthenticationHook } from '@commercetools/connect-payments-sdk';
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import {
+  PaymentConfirmRequestSchemaDTO,
+  PaymentConfirmationRequestSchema,
   PaymentRequestSchema,
   PaymentRequestSchemaDTO,
   PaymentResponseSchema,
   PaymentResponseSchemaDTO,
 } from '../dtos/paypal-payment.dto';
 import { PaypalPaymentService } from '../services/paypal-payment.service';
+import { PaymentIntentResponseSchemaDTO, PaymentIntentResponseSchema } from '../dtos/operations/payment-intents.dto';
 
 type PaymentRoutesOptions = {
   paymentService: PaypalPaymentService;
   sessionAuthHook: SessionAuthenticationHook;
 };
 
-// TODO: this would contain the endpoints for creating and confirming a payment intent. IN our case, /payment-intent and /payment-intent/confirm
 export const paymentRoutes = async (fastify: FastifyInstance, opts: FastifyPluginOptions & PaymentRoutesOptions) => {
   fastify.post<{ Body: PaymentRequestSchemaDTO; Reply: PaymentResponseSchemaDTO }>(
     '/payments',
@@ -35,20 +37,19 @@ export const paymentRoutes = async (fastify: FastifyInstance, opts: FastifyPlugi
     },
   );
 
-  // TODO: implement this, but we can test it without implementing the enabler. To test lets log the paypal response after creating an order, and use the link to approve the payment
-  fastify.post<{ Body: PaymentRequestSchemaDTO; Reply: PaymentResponseSchemaDTO }>(
+  fastify.post<{ Body: PaymentConfirmRequestSchemaDTO; Reply: PaymentIntentResponseSchemaDTO }>(
     '/payments/confirm',
     {
       preHandler: [opts.sessionAuthHook.authenticate()],
       schema: {
-        body: PaymentRequestSchema,
+        body: PaymentConfirmationRequestSchema,
         response: {
-          200: PaymentResponseSchema,
+          200: PaymentIntentResponseSchema,
         },
       },
     },
     async (request, reply) => {
-      const resp = await opts.paymentService.createPayment({
+      const resp = await opts.paymentService.confirmPayment({
         data: request.body,
       });
 

@@ -1,12 +1,16 @@
-import { CommercetoolsCartService, CommercetoolsPaymentService } from '@commercetools/connect-payments-sdk';
-import { PaymentOutcome, PaymentResponseSchemaDTO } from '../dtos/paypal-payment.dto';
+import {
+  CommercetoolsCartService,
+  CommercetoolsPaymentService,
+  ErrorGeneral,
+} from '@commercetools/connect-payments-sdk';
+import { PaymentConfirmRequestSchemaDTO, PaymentOutcome, PaymentResponseSchemaDTO } from '../dtos/paypal-payment.dto';
 
 import { getCartIdFromContext } from '../libs/fastify/context/context';
-import { CreatePayment } from './types/paypal-payment.type';
+import { ConfirmPayment, CreatePayment } from './types/paypal-payment.type';
 import { PaypalPaymentAPI } from './api/api';
-import { Address, Cart, Money } from '@commercetools/platform-sdk';
+import { Address, Cart, Money, Payment } from '@commercetools/platform-sdk';
 import { CreateOrderRequest, PaypalShipping, parseAmount } from './types/paypal-api.type';
-import { PaymentModificationStatus } from '../dtos/operations/payment-intents.dto';
+import { PaymentIntentResponseSchemaDTO, PaymentModificationStatus } from '../dtos/operations/payment-intents.dto';
 import { randomUUID } from 'crypto';
 
 export type PaypalPaymentServiceOptions = {
@@ -69,18 +73,14 @@ export class PaypalPaymentService {
 
     const resultCode = isAuthorized ? PaymentOutcome.AUTHORIZED : PaymentOutcome.REJECTED;
 
-    const pspReference = paypalResponse.pspReference;
-
-    const paymentMethodType = paymentMethod.type;
-
     const updatedPayment = await this.ctPaymentService.updatePayment({
       id: ctPayment.id,
-      pspReference: pspReference,
-      paymentMethod: paymentMethodType,
+      pspReference: paypalResponse.pspReference,
+      paymentMethod: paymentMethod.type,
       transaction: {
         type: 'Authorization',
         amount: ctPayment.amountPlanned,
-        interactionId: pspReference,
+        interactionId: paypalResponse.pspReference,
         state: this.convertPaymentResultCode(resultCode as PaymentOutcome),
       },
     });
@@ -89,6 +89,68 @@ export class PaypalPaymentService {
       outcome: resultCode,
       paymentReference: updatedPayment.id,
     };
+  }
+
+  public async confirmPayment(opts: ConfirmPayment): Promise<PaymentIntentResponseSchemaDTO> {
+    const ctPayment = await this.ctPaymentService.getPayment({
+      id: opts.data.details.paymentReference,
+    });
+
+    this.validateInterfaceIdMismatch(ctPayment, opts.data);
+
+    let updatedPayment = await this.ctPaymentService.updatePayment({
+      id: ctPayment.id,
+      transaction: {
+        type: 'Charge',
+        amount: ctPayment.amountPlanned,
+        state: 'Initial',
+      },
+    });
+
+    try {
+      // Make call to paypal to create payment intent
+      const paypalResponse = await this.paypalClient.captureOrder(opts.data.details.pspReference);
+
+      updatedPayment = await this.ctPaymentService.updatePayment({
+        id: ctPayment.id,
+        transaction: {
+          type: 'Charge',
+          amount: ctPayment.amountPlanned,
+          interactionId: paypalResponse.pspReference,
+          state: paypalResponse.outcome === PaymentModificationStatus.APPROVED ? 'Success' : 'Failure',
+        },
+      });
+
+      return {
+        outcome: paypalResponse.outcome,
+        paymentReference: updatedPayment.id,
+      };
+    } catch (e) {
+      // TODO: create a new method in payment sdk for changing transaction stat. To be used in scenarios, where we expect the txn state to change,
+      // from initial, to success to failure https://docs.commercetools.com/api/projects/payments#change-transactionstate
+      await this.ctPaymentService.updatePayment({
+        id: ctPayment.id,
+        transaction: {
+          type: 'Charge',
+          amount: ctPayment.amountPlanned,
+          state: 'Failure',
+        },
+      });
+
+      throw e;
+    }
+  }
+
+  private validateInterfaceIdMismatch(payment: Payment, data: PaymentConfirmRequestSchemaDTO) {
+    if (payment.interfaceId !== data.details?.pspReference) {
+      throw new ErrorGeneral('not able to confirm the payment', {
+        fields: {
+          cocoError: 'interface id mismatch',
+          pspReference: data.details?.pspReference,
+          paymentReference: payment.id,
+        },
+      });
+    }
   }
 
   private convertPaymentResultCode(resultCode: PaymentOutcome): string {

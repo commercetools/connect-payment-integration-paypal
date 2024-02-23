@@ -1,7 +1,11 @@
-import { PaymentOutcome, PaymentRequestSchemaDTO } from '../../dtos/paypal-payment.dto';
+import { PaymentConfirmRequestSchemaDTO, PaymentOutcome, PaymentRequestSchemaDTO } from '../../dtos/paypal-payment.dto';
 
 export type CreatePayment = {
   data: PaymentRequestSchemaDTO;
+};
+
+export type ConfirmPayment = {
+  data: PaymentConfirmRequestSchemaDTO;
 };
 
 export type CreatePaymentRequest = {

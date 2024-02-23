@@ -59,7 +59,7 @@ export class DefaultOperationService implements OperationService {
 
     const transactionType = this.getPaymentTransactionType(request.action);
 
-    const updatedPayment = await this.ctPaymentService.updatePayment({
+    let updatedPayment = await this.ctPaymentService.updatePayment({
       id: ctPayment.id,
       transaction: {
         type: transactionType,
@@ -68,22 +68,38 @@ export class DefaultOperationService implements OperationService {
       },
     });
 
-    const res = await this.processPaymentModification(updatedPayment, transactionType, requestAmount);
+    // TODO: use the methods within the ctPaymentService, to validate the payment modification requests.
+    // this.ctPaymentService.validatePaymentCharge() ==> example
 
-    // TODO: if we throw an error in any of the calls within processPaymentModification, we never get to update this transsaction state to Failure below
-    await this.ctPaymentService.updatePayment({
-      id: ctPayment.id,
-      transaction: {
-        type: transactionType,
-        amount: requestAmount,
-        interactionId: res?.pspReference,
-        state: res.outcome === PaymentModificationStatus.APPROVED ? 'Success' : 'Failure',
-      },
-    });
+    try {
+      const res = await this.processPaymentModification(updatedPayment, transactionType, requestAmount);
 
-    return {
-      outcome: res.outcome,
-    };
+      updatedPayment = await this.ctPaymentService.updatePayment({
+        id: ctPayment.id,
+        transaction: {
+          type: transactionType,
+          amount: requestAmount,
+          interactionId: res?.pspReference,
+          state: res.outcome === PaymentModificationStatus.APPROVED ? 'Success' : 'Failure',
+        },
+      });
+
+      return {
+        outcome: res.outcome,
+        paymentReference: updatedPayment.id,
+      };
+    } catch (e) {
+      await this.ctPaymentService.updatePayment({
+        id: ctPayment.id,
+        transaction: {
+          type: transactionType,
+          amount: requestAmount,
+          state: 'Failure',
+        },
+      });
+
+      throw e;
+    }
   }
 
   private getPaymentTransactionType(action: string): string {
