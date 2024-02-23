@@ -21,7 +21,6 @@ export type PaypalPaymentServiceOptions = {
 export class PaypalPaymentService {
   private ctCartService: CommercetoolsCartService;
   private ctPaymentService: CommercetoolsPaymentService;
-  // private allowedCreditCards = ['4111111111111111', '5555555555554444', '341925950237632'];
   private paypalClient: PaypalPaymentAPI;
 
   constructor(opts: PaypalPaymentServiceOptions) {
@@ -29,10 +28,6 @@ export class PaypalPaymentService {
     this.ctPaymentService = opts.ctPaymentService;
     this.paypalClient = new PaypalPaymentAPI();
   }
-
-  // private isCreditCardAllowed(cardNumber: string) {
-  //   return this.allowedCreditCards.includes(cardNumber);
-  // }
 
   public async createPayment(opts: CreatePayment): Promise<PaymentResponseSchemaDTO> {
     const ctCart = await this.ctCartService.getCart({
