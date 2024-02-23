@@ -1,6 +1,5 @@
-import { healthCheckCommercetoolsPermissions, statusHandler } from '@commercetools/connect-payments-sdk';
+import { ErrorGeneral, healthCheckCommercetoolsPermissions, statusHandler } from '@commercetools/connect-payments-sdk';
 import { config } from '../../config/config';
-import { PaymentModificationStatus } from '../../dtos/operations/payment-intents.dto';
 import { paymentSDK } from '../../payment-sdk';
 import {
   CancelPaymentRequest,
@@ -78,10 +77,12 @@ export class PaypalOperationProcessor implements OperationProcessor {
   }
 
   async cancelPayment(request: CancelPaymentRequest): Promise<PaymentProviderModificationResponse> {
-    return {
-      outcome: PaymentModificationStatus.REJECTED,
-      pspReference: `${request.payment.interfaceId} operation not supported`,
-    };
+    throw new ErrorGeneral('operation not supported', {
+      fields: {
+        pspReference: request.payment.interfaceId,
+      },
+      privateMessage: "connector doesn't support cancel operation",
+    });
   }
 
   async refundPayment(request: RefundPaymentRequest): Promise<PaymentProviderModificationResponse> {
