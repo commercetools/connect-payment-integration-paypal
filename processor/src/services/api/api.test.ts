@@ -52,7 +52,7 @@ describe('Paypal API', () => {
       const result = api.authenticateRequest();
 
       // then
-      await expect(result).rejects.toThrow('Error while authenticating with connector');
+      await expect(result).rejects.toThrow('Error while authenticating with payment provider.');
     });
   });
 

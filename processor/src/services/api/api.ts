@@ -251,7 +251,7 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
         accessToken: data.access_token,
       };
     } catch (e) {
-      throw new ErrorGeneral('Error while authenticating with connector', {
+      throw new ErrorGeneral('Error while authenticating with payment provider.', {
         privateMessage: 'error occurred due to failed authorization request to paypal',
         cause: e,
       });
