@@ -103,7 +103,7 @@ export class PaypalPaymentService {
     });
 
     try {
-      // Make call to paypal to create payment intent
+      // Make call to paypal to capture payment intent
       const paypalResponse = await this.paypalClient.captureOrder(opts.data.details.pspReference);
 
       updatedPayment = await this.ctPaymentService.updatePayment({

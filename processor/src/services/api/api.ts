@@ -9,95 +9,90 @@ import {
   PaypalUrls,
   parseAmount,
 } from '../types/paypal-api.type';
-import axios, { AxiosError, AxiosResponse } from 'axios';
 import { ErrorGeneral } from '@commercetools/connect-payments-sdk';
 import { Money } from '@commercetools/platform-sdk';
 import { randomUUID } from 'crypto';
 
 export class PaypalPaymentAPI implements IPaypalPaymentAPI {
-  async healthCheck(): Promise<AxiosResponse | undefined> {
+  async healthCheck(): Promise<Response | undefined> {
     const url = this.buildResourceUrl(config.paypalEnvironment, PaypalUrls.HEALTH_CHECK);
 
-    try {
-      const auth = await this.authenticateRequest();
-      const options = {
-        url,
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${auth.accessToken}`,
-        },
-      };
+    const auth = await this.authenticateRequest();
+    const options = {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${auth.accessToken}`,
+      },
+    };
 
-      return await axios(options);
-    } catch (e) {
+    const res = await fetch(url, options);
+    if (!res.ok) {
       throw new ErrorGeneral();
     }
+
+    return res.json();
   }
 
   async createOrder(payload: CreateOrderRequest): Promise<PaymentProviderModificationResponse> {
     const url = this.buildResourceUrl(config.paypalEnvironment, PaypalUrls.ORDERS);
-    try {
-      const auth = await this.authenticateRequest();
-      const options = {
-        url,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'PayPal-Request-Id': randomUUID(), // required for idempotency BY PAYPAL
-          'PayPal-Partner-Attribution-Id': 'commercetools_Cart_Checkout',
-          Authorization: `Bearer ${auth.accessToken}`,
-        },
-        data: JSON.stringify(payload),
-      };
+    const auth = await this.authenticateRequest();
+    const options = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'PayPal-Request-Id': randomUUID(), // required for idempotency BY PAYPAL
+        'PayPal-Partner-Attribution-Id': 'commercetools_Cart_Checkout',
+        Authorization: `Bearer ${auth.accessToken}`,
+      },
+      body: JSON.stringify(payload),
+    };
 
-      const response = await axios(options);
-      return {
-        outcome: PaymentModificationStatus.APPROVED,
-        pspReference: response.data.id,
-      };
-    } catch (e) {
-      const errorData: any = (e as AxiosError).response?.data;
+    const res = await fetch(url, options);
+    if (!res.ok) {
+      const error = await res.json();
       throw new ErrorGeneral('not able to create a paypal order', {
         fields: {
-          payPalCorrelationId: errorData?.debug_id,
+          payPalCorrelationId: res.headers.get('paypal-debug-id'),
           url,
-          apiError: errorData ? JSON.stringify(errorData) : 'not able to create a paypal order',
+          apiError: error,
         },
-        cause: e,
       });
     }
+    const data = await res.json();
+
+    return {
+      outcome: PaymentModificationStatus.APPROVED,
+      pspReference: data.id,
+    };
   }
 
   async captureOrder(resourceId: string | undefined): Promise<PaymentProviderModificationResponse> {
     const url = this.buildResourceUrl(config.paypalEnvironment, PaypalUrls.ORDERS_CAPTURE, resourceId);
-    try {
-      const auth = await this.authenticateRequest();
-      const options = {
-        url,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'PayPal-Request-Id': randomUUID(), // required for idempotency BY PAYPAL
-          'PayPal-Partner-Attribution-Id': 'commercetools_Cart_Checkout',
-          Authorization: `Bearer ${auth.accessToken}`,
-        },
-      };
+    const auth = await this.authenticateRequest();
+    const options = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'PayPal-Request-Id': randomUUID(), // required for idempotency BY PAYPAL
+        'PayPal-Partner-Attribution-Id': 'commercetools_Cart_Checkout',
+        Authorization: `Bearer ${auth.accessToken}`,
+      },
+    };
 
-      const response = await axios(options);
-
-      return this.convertCaptureOrderResponse(response.data);
-    } catch (e) {
-      const errorData: any = (e as AxiosError).response?.data;
+    const res = await fetch(url, options);
+    if (!res.ok) {
+      const error = await res.json();
       throw new ErrorGeneral('not able to capture the paypal order', {
         fields: {
-          payPalCorrelationId: errorData?.debug_id,
+          payPalCorrelationId: res.headers.get('paypal-debug-id'),
           url,
-          apiError: errorData ? JSON.stringify(errorData) : 'not able to capture the paypal order',
+          apiError: error,
         },
-        cause: e,
       });
     }
+    const data = await res.json();
+    return this.convertCaptureOrderResponse(data);
   }
 
   async refundPartialPayment(
@@ -106,72 +101,68 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
   ): Promise<PaymentProviderModificationResponse> {
     const url = this.buildResourceUrl(config.paypalEnvironment, PaypalUrls.ORDERS_REFUND, paymentReference);
 
-    const data = this.convertToPaypalAmount(payload);
+    const paypalAmount = this.convertToPaypalAmount(payload);
 
-    try {
-      const auth = await this.authenticateRequest();
-      const options = {
-        url,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'PayPal-Request-Id': randomUUID(), // required for idempotency BY PAYPAL
-          'PayPal-Partner-Attribution-Id': 'commercetools_Cart_Checkout',
-          Authorization: `Bearer ${auth.accessToken}`,
-        },
-        data: JSON.stringify(data),
-      };
+    const auth = await this.authenticateRequest();
+    const options = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'PayPal-Request-Id': randomUUID(), // required for idempotency BY PAYPAL
+        'PayPal-Partner-Attribution-Id': 'commercetools_Cart_Checkout',
+        Authorization: `Bearer ${auth.accessToken}`,
+      },
+      body: JSON.stringify(paypalAmount),
+    };
 
-      const response = await axios(options);
-      return {
-        outcome: PaymentModificationStatus.APPROVED,
-        pspReference: response.data.id,
-      };
-    } catch (e) {
-      const errorData: any = (e as AxiosError).response?.data;
+    const res = await fetch(url, options);
+    if (!res.ok) {
+      const error = await res.json();
       throw new ErrorGeneral('not able to partially refund a payment', {
         fields: {
-          payPalCorrelationId: errorData?.debug_id,
+          payPalCorrelationId: res.headers.get('paypal-debug-id'),
           url,
-          apiError: errorData ? JSON.stringify(errorData) : 'not able to partially refund a payment',
+          apiError: error,
         },
-        cause: e,
       });
     }
+    const data = await res.json();
+    return {
+      outcome: PaymentModificationStatus.APPROVED,
+      pspReference: data.id,
+    };
   }
 
   async refundFullPayment(paymentReference: string | undefined): Promise<PaymentProviderModificationResponse> {
     const url = this.buildResourceUrl(config.paypalEnvironment, PaypalUrls.ORDERS_REFUND, paymentReference);
 
-    try {
-      const auth = await this.authenticateRequest();
-      const options = {
-        url,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'PayPal-Request-Id': randomUUID(), // required for idempotency BY PAYPAL
-          'PayPal-Partner-Attribution-Id': 'commercetools_Cart_Checkout',
-          Authorization: `Bearer ${auth.accessToken}`,
-        },
-      };
+    const auth = await this.authenticateRequest();
+    const options = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'PayPal-Request-Id': randomUUID(), // required for idempotency BY PAYPAL
+        'PayPal-Partner-Attribution-Id': 'commercetools_Cart_Checkout',
+        Authorization: `Bearer ${auth.accessToken}`,
+      },
+    };
 
-      const response = await axios(options);
-      return {
-        outcome: PaymentModificationStatus.APPROVED,
-        pspReference: response.data.id,
-      };
-    } catch (e) {
-      const errorData: any = (e as AxiosError).response?.data;
+    const res = await fetch(url, options);
+    if (!res.ok) {
+      const error = await res.json();
       throw new ErrorGeneral('not able to fully refund a payment', {
         fields: {
-          payPalCorrelationId: errorData?.debug_id,
+          payPalCorrelationId: res.headers.get('paypal-debug-id'),
           url,
-          apiError: errorData ? JSON.stringify(errorData) : 'not able to fully refund a payment',
+          apiError: error,
         },
-        cause: e,
       });
     }
+    const data = await res.json();
+    return {
+      outcome: PaymentModificationStatus.APPROVED,
+      pspReference: data.id,
+    };
   }
 
   private convertCaptureOrderResponse(data: any): PaymentProviderModificationResponse {
@@ -227,35 +218,34 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
 
   async authenticateRequest(): Promise<AuthenticationResponse> {
     const url = this.buildResourceUrl(config.paypalEnvironment, PaypalUrls.AUTHENTICATION);
+    const encodedCredentials = btoa(`${config.paypalClientId}:${config.paypalClientSecret}`);
 
-    try {
-      const options = {
-        url,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        auth: {
-          username: config.paypalClientId,
-          password: config.paypalClientSecret,
-        },
-        params: {
-          grant_type: 'client_credentials',
-        },
-      };
+    const options = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${encodedCredentials}`,
+      },
+      body: 'grant_type=client_credentials',
+    };
 
-      const { status, data } = await axios(options);
-
-      return {
-        status,
-        accessToken: data.access_token,
-      };
-    } catch (e) {
+    const res = await fetch(url, options);
+    if (!res.ok) {
+      const error = await res.json();
       throw new ErrorGeneral('Error while authenticating with payment provider.', {
         privateMessage: 'error occurred due to failed authorization request to paypal',
-        cause: e,
+        privateFields: {
+          paypalCorrelationId: res.headers.get('paypal-debug-id'),
+          apiError: error,
+        },
       });
     }
+    const { access_token: accessToken } = await res.json();
+
+    return {
+      status: res.status,
+      accessToken,
+    };
   }
 
   private convertToPaypalAmount(amount: Money) {

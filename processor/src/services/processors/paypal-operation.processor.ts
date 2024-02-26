@@ -48,7 +48,7 @@ export class PaypalOperationProcessor implements OperationProcessor {
                 },
               };
             } else {
-              throw new Error(healthCheck?.data?.message);
+              throw new Error(healthCheck?.statusText);
             }
           } catch (e) {
             return {
