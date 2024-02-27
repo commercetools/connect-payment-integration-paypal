@@ -3,15 +3,20 @@ import {
   CommercetoolsPaymentService,
   ErrorGeneral,
 } from '@commercetools/connect-payments-sdk';
-import { PaymentConfirmRequestSchemaDTO, PaymentOutcome, PaymentResponseSchemaDTO } from '../dtos/paypal-payment.dto';
+import {
+  OrderRequestSchemaDTO,
+  OrderResponseSchemaDTO,
+  PaymentOutcome,
+  OrderCaptureResponseSchemaDTO,
+} from '../dtos/paypal-payment.dto';
 
 import { getCartIdFromContext } from '../libs/fastify/context/context';
-import { ConfirmPayment, CreatePayment } from './types/paypal-payment.type';
 import { PaypalPaymentAPI } from './api/api';
 import { Address, Cart, Money, Payment } from '@commercetools/platform-sdk';
 import { CreateOrderRequest, PaypalShipping, parseAmount } from './types/paypal-api.type';
-import { PaymentIntentResponseSchemaDTO, PaymentModificationStatus } from '../dtos/operations/payment-intents.dto';
+import { PaymentModificationStatus } from '../dtos/operations/payment-intents.dto';
 import { randomUUID } from 'crypto';
+import { OrderConfirmation } from './types/paypal-payment.type';
 
 export type PaypalPaymentServiceOptions = {
   ctCartService: CommercetoolsCartService;
@@ -29,7 +34,7 @@ export class PaypalPaymentService {
     this.paypalClient = new PaypalPaymentAPI();
   }
 
-  public async createPayment(opts: CreatePayment): Promise<PaymentResponseSchemaDTO> {
+  public async createPayment(data: OrderRequestSchemaDTO): Promise<OrderResponseSchemaDTO> {
     const ctCart = await this.ctCartService.getCart({
       id: getCartIdFromContext(),
     });
@@ -58,12 +63,11 @@ export class PaypalPaymentService {
       paymentId: ctPayment.id,
     });
 
-    const paymentMethod = opts.data.paymentMethod;
-
     // Make call to paypal to create payment intent
-    const paypalRequestData = this.convertCreatePaymentIntentRequest(ctCart, amountPlanned);
+    const paypalRequestData = this.convertCreatePaymentIntentRequest(ctCart, amountPlanned, data);
     const paypalResponse = await this.paypalClient.createOrder(paypalRequestData);
 
+    // TODO: we need to remove dependency on this enum belonging to payment intents
     const isAuthorized = paypalResponse.outcome === PaymentModificationStatus.APPROVED;
 
     const resultCode = isAuthorized ? PaymentOutcome.AUTHORIZED : PaymentOutcome.REJECTED;
@@ -71,7 +75,7 @@ export class PaypalPaymentService {
     const updatedPayment = await this.ctPaymentService.updatePayment({
       id: ctPayment.id,
       pspReference: paypalResponse.pspReference,
-      paymentMethod: paymentMethod.type,
+      paymentMethod: 'paypal',
       transaction: {
         type: 'Authorization',
         amount: ctPayment.amountPlanned,
@@ -81,17 +85,17 @@ export class PaypalPaymentService {
     });
 
     return {
-      outcome: resultCode,
+      id: paypalResponse.pspReference,
       paymentReference: updatedPayment.id,
     };
   }
 
-  public async confirmPayment(opts: ConfirmPayment): Promise<PaymentIntentResponseSchemaDTO> {
+  public async confirmPayment(opts: OrderConfirmation): Promise<OrderCaptureResponseSchemaDTO> {
     const ctPayment = await this.ctPaymentService.getPayment({
-      id: opts.data.details.paymentReference,
+      id: opts.data.paymentReference,
     });
 
-    this.validateInterfaceIdMismatch(ctPayment, opts.data);
+    this.validateInterfaceIdMismatch(ctPayment, opts.data.orderId);
 
     let updatedPayment = await this.ctPaymentService.updatePayment({
       id: ctPayment.id,
@@ -104,7 +108,7 @@ export class PaypalPaymentService {
 
     try {
       // Make call to paypal to capture payment intent
-      const paypalResponse = await this.paypalClient.captureOrder(opts.data.details.pspReference);
+      const paypalResponse = await this.paypalClient.captureOrder(opts.data.orderId);
 
       updatedPayment = await this.ctPaymentService.updatePayment({
         id: ctPayment.id,
@@ -117,7 +121,7 @@ export class PaypalPaymentService {
       });
 
       return {
-        outcome: paypalResponse.outcome,
+        id: paypalResponse.pspReference,
         paymentReference: updatedPayment.id,
       };
     } catch (e) {
@@ -136,12 +140,12 @@ export class PaypalPaymentService {
     }
   }
 
-  private validateInterfaceIdMismatch(payment: Payment, data: PaymentConfirmRequestSchemaDTO) {
-    if (payment.interfaceId !== data.details?.pspReference) {
+  private validateInterfaceIdMismatch(payment: Payment, orderId: string) {
+    if (payment.interfaceId !== orderId) {
       throw new ErrorGeneral('not able to confirm the payment', {
         fields: {
           cocoError: 'interface id mismatch',
-          pspReference: data.details?.pspReference,
+          pspReference: orderId,
           paymentReference: payment.id,
         },
       });
@@ -159,9 +163,13 @@ export class PaypalPaymentService {
     }
   }
 
-  private convertCreatePaymentIntentRequest(cart: Cart, amount: Money): CreateOrderRequest {
+  private convertCreatePaymentIntentRequest(
+    cart: Cart,
+    amount: Money,
+    payload: OrderRequestSchemaDTO,
+  ): CreateOrderRequest {
     return {
-      intent: 'CAPTURE',
+      ...payload,
       purchase_units: [
         {
           reference_id: 'ct-connect-paypal-' + randomUUID(),
@@ -173,14 +181,6 @@ export class PaypalPaymentService {
           shipping: this.convertShippingAddress(cart.shippingAddress),
         },
       ],
-      payment_source: {
-        paypal: {
-          experience_context: {
-            payment_method_preference: 'IMMEDIATE_PAYMENT_REQUIRED',
-            user_action: 'PAY_NOW',
-          },
-        },
-      },
     };
   }
 
