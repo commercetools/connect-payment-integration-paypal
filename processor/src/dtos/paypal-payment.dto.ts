@@ -1,31 +1,53 @@
 import { Static, Type } from '@sinclair/typebox';
 
-export const CardPaymentMethodSchema = Type.Object({
-  // TODO: Remove the fields according to the payment provider solution,
-  //  Strongly recommend not to process PAN data to Connectors.
-  type: Type.Literal('card'),
-  cardNumber: Type.String(),
-  expiryMonth: Type.Number(),
-  expiryYear: Type.Number(),
-  cvc: Type.Number(),
-  holderName: Type.Optional(Type.String()),
-});
-
-export const PaymentRequestSchema = Type.Object({
-  paymentMethod: Type.Composite([CardPaymentMethodSchema]),
-});
-
 export enum PaymentOutcome {
   AUTHORIZED = 'Authorized',
   REJECTED = 'Rejected',
 }
 
+export enum Intent {
+  CAPTURE = 'CAPTURE',
+  AUTHORIZE = 'AUTHORIZE',
+}
+
 export const PaymentOutcomeSchema = Type.Enum(PaymentOutcome);
 
-export const PaymentResponseSchema = Type.Object({
-  outcome: PaymentOutcomeSchema,
+export const OrderRequestSchema = Type.Object({
+  intent: Type.Enum(Intent),
+  payment_source: Type.Object({
+    paypal: Type.Object({
+      experience_context: Type.Object({
+        payment_method_preference: Type.Optional(Type.String()),
+        payment_method_selected: Type.Optional(Type.String()),
+        user_action: Type.Optional(Type.String()),
+        locale: Type.Optional(Type.String()),
+      }),
+    }),
+  }),
+});
+
+export const OrderResponseSchema = Type.Object({
+  id: Type.String(),
   paymentReference: Type.String(),
 });
 
-export type PaymentRequestSchemaDTO = Static<typeof PaymentRequestSchema>;
-export type PaymentResponseSchemaDTO = Static<typeof PaymentResponseSchema>;
+export const OrderCaptureRequestSchema = Type.Object({
+  paymentReference: Type.String(),
+});
+
+export const OrderCaptureResponseSchema = Type.Object({
+  id: Type.String(),
+  paymentReference: Type.String(),
+});
+
+export const OrderCaptureParamsSchema = Type.Object({
+  id: Type.String(),
+});
+
+export type OrderRequestSchemaDTO = Static<typeof OrderRequestSchema>;
+export type OrderResponseSchemaDTO = Static<typeof OrderResponseSchema>;
+
+export type OrderCaptureRequestSchemaDTO = Static<typeof OrderCaptureRequestSchema>;
+export type OrderCaptureResponseSchemaDTO = Static<typeof OrderCaptureResponseSchema>;
+
+export type OrderCaptureParamsSchemaDTO = Static<typeof OrderCaptureParamsSchema>;

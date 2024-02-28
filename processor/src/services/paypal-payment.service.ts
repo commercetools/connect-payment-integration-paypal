@@ -1,9 +1,22 @@
-import { CommercetoolsCartService, CommercetoolsPaymentService } from '@commercetools/connect-payments-sdk';
-import { PaymentOutcome, PaymentResponseSchemaDTO } from '../dtos/paypal-payment.dto';
+import {
+  CommercetoolsCartService,
+  CommercetoolsPaymentService,
+  ErrorGeneral,
+} from '@commercetools/connect-payments-sdk';
+import {
+  OrderRequestSchemaDTO,
+  OrderResponseSchemaDTO,
+  PaymentOutcome,
+  OrderCaptureResponseSchemaDTO,
+} from '../dtos/paypal-payment.dto';
 
-import { randomUUID } from 'crypto';
 import { getCartIdFromContext } from '../libs/fastify/context/context';
-import { CreatePayment } from './types/paypal-payment.type';
+import { PaypalPaymentAPI } from './api/api';
+import { Address, Cart, Money, Payment } from '@commercetools/platform-sdk';
+import { CreateOrderRequest, PaypalShipping, parseAmount } from './types/paypal-api.type';
+import { PaymentModificationStatus } from '../dtos/operations/payment-intents.dto';
+import { randomUUID } from 'crypto';
+import { OrderConfirmation } from './types/paypal-payment.type';
 
 export type PaypalPaymentServiceOptions = {
   ctCartService: CommercetoolsCartService;
@@ -13,35 +26,24 @@ export type PaypalPaymentServiceOptions = {
 export class PaypalPaymentService {
   private ctCartService: CommercetoolsCartService;
   private ctPaymentService: CommercetoolsPaymentService;
-  private allowedCreditCards = ['4111111111111111', '5555555555554444', '341925950237632'];
+  private paypalClient: PaypalPaymentAPI;
 
   constructor(opts: PaypalPaymentServiceOptions) {
     this.ctCartService = opts.ctCartService;
     this.ctPaymentService = opts.ctPaymentService;
+    this.paypalClient = new PaypalPaymentAPI();
   }
 
-  private isCreditCardAllowed(cardNumber: string) {
-    return this.allowedCreditCards.includes(cardNumber);
-  }
-
-  /**
-   * Create payment
-   *
-   * @remarks
-   * Implementation to provide the mocking data for payment creation in external PSPs
-   *
-   * @param request - contains amount and {@link https://docs.commercetools.com/api/projects/payments | Payment } defined in composable commerce
-   * @returns Promise with mocking data containing operation status and PSP reference
-   */
-  public async createPayment(opts: CreatePayment): Promise<PaymentResponseSchemaDTO> {
+  public async createPayment(data: OrderRequestSchemaDTO): Promise<OrderResponseSchemaDTO> {
     const ctCart = await this.ctCartService.getCart({
       id: getCartIdFromContext(),
     });
+    const amountPlanned = await this.ctCartService.getPaymentAmount({
+      cart: ctCart,
+    });
 
     const ctPayment = await this.ctPaymentService.createPayment({
-      amountPlanned: await this.ctCartService.getPaymentAmount({
-        cart: ctCart,
-      }),
+      amountPlanned,
       paymentMethodInfo: {
         paymentInterface: 'paypal',
       },
@@ -61,31 +63,93 @@ export class PaypalPaymentService {
       paymentId: ctPayment.id,
     });
 
-    const paymentMethod = opts.data.paymentMethod;
-    const isAuthorized = this.isCreditCardAllowed(paymentMethod.cardNumber);
+    // Make call to paypal to create payment intent
+    const paypalRequestData = this.convertCreatePaymentIntentRequest(ctCart, amountPlanned, data);
+    const paypalResponse = await this.paypalClient.createOrder(paypalRequestData);
+
+    // TODO: we need to remove dependency on this enum belonging to payment intents
+    const isAuthorized = paypalResponse.outcome === PaymentModificationStatus.APPROVED;
 
     const resultCode = isAuthorized ? PaymentOutcome.AUTHORIZED : PaymentOutcome.REJECTED;
 
-    const pspReference = randomUUID().toString();
-
-    const paymentMethodType = paymentMethod.type;
-
     const updatedPayment = await this.ctPaymentService.updatePayment({
       id: ctPayment.id,
-      pspReference: pspReference,
-      paymentMethod: paymentMethodType,
+      pspReference: paypalResponse.pspReference,
+      paymentMethod: 'paypal',
       transaction: {
         type: 'Authorization',
         amount: ctPayment.amountPlanned,
-        interactionId: pspReference,
+        interactionId: paypalResponse.pspReference,
         state: this.convertPaymentResultCode(resultCode as PaymentOutcome),
       },
     });
 
     return {
-      outcome: resultCode,
+      id: paypalResponse.pspReference,
       paymentReference: updatedPayment.id,
     };
+  }
+
+  public async confirmPayment(opts: OrderConfirmation): Promise<OrderCaptureResponseSchemaDTO> {
+    const ctPayment = await this.ctPaymentService.getPayment({
+      id: opts.data.paymentReference,
+    });
+
+    this.validateInterfaceIdMismatch(ctPayment, opts.data.orderId);
+
+    let updatedPayment = await this.ctPaymentService.updatePayment({
+      id: ctPayment.id,
+      transaction: {
+        type: 'Charge',
+        amount: ctPayment.amountPlanned,
+        state: 'Initial',
+      },
+    });
+
+    try {
+      // Make call to paypal to capture payment intent
+      const paypalResponse = await this.paypalClient.captureOrder(opts.data.orderId);
+
+      updatedPayment = await this.ctPaymentService.updatePayment({
+        id: ctPayment.id,
+        transaction: {
+          type: 'Charge',
+          amount: ctPayment.amountPlanned,
+          interactionId: paypalResponse.pspReference,
+          state: paypalResponse.outcome === PaymentModificationStatus.APPROVED ? 'Success' : 'Failure',
+        },
+      });
+
+      return {
+        id: paypalResponse.pspReference,
+        paymentReference: updatedPayment.id,
+      };
+    } catch (e) {
+      // TODO: create a new method in payment sdk for changing transaction stat. To be used in scenarios, where we expect the txn state to change,
+      // from initial, to success to failure https://docs.commercetools.com/api/projects/payments#change-transactionstate
+      await this.ctPaymentService.updatePayment({
+        id: ctPayment.id,
+        transaction: {
+          type: 'Charge',
+          amount: ctPayment.amountPlanned,
+          state: 'Failure',
+        },
+      });
+
+      throw e;
+    }
+  }
+
+  private validateInterfaceIdMismatch(payment: Payment, orderId: string) {
+    if (payment.interfaceId !== orderId) {
+      throw new ErrorGeneral('not able to confirm the payment', {
+        fields: {
+          cocoError: 'interface id mismatch',
+          pspReference: orderId,
+          paymentReference: payment.id,
+        },
+      });
+    }
   }
 
   private convertPaymentResultCode(resultCode: PaymentOutcome): string {
@@ -97,5 +161,79 @@ export class PaypalPaymentService {
       default:
         return 'Initial';
     }
+  }
+
+  private convertCreatePaymentIntentRequest(
+    cart: Cart,
+    amount: Money,
+    payload: OrderRequestSchemaDTO,
+  ): CreateOrderRequest {
+    return {
+      ...payload,
+      purchase_units: [
+        {
+          reference_id: 'ct-connect-paypal-' + randomUUID(),
+          invoice_id: cart.id,
+          amount: {
+            currency_code: amount.currencyCode,
+            value: parseAmount(amount.centAmount),
+          },
+          shipping: this.convertShippingAddress(cart.shippingAddress),
+        },
+      ],
+    };
+  }
+
+  private convertShippingAddress(shippingAddress: Address | undefined): PaypalShipping {
+    return {
+      type: 'SHIPPING',
+      name: {
+        full_name: this.getFullName(shippingAddress?.firstName, shippingAddress?.lastName),
+      },
+      address: {
+        postal_code: shippingAddress?.postalCode,
+        country_code: shippingAddress?.country || '',
+        address_line_1: this.getAddressLine(shippingAddress?.streetName, shippingAddress?.streetNumber),
+        address_line_2: shippingAddress?.additionalStreetInfo,
+        admin_area_1: shippingAddress?.state || shippingAddress?.region || '',
+        admin_area_2: shippingAddress?.city,
+      },
+    };
+  }
+
+  private getFullName(firstName: string | undefined, lastName: string | undefined): string {
+    let fullName = '';
+
+    if (firstName) {
+      fullName = firstName;
+    }
+
+    if (lastName) {
+      if (fullName.length > 0) {
+        fullName = `${fullName} ${lastName}`;
+      } else {
+        fullName = lastName;
+      }
+    }
+
+    return fullName;
+  }
+
+  private getAddressLine(streetName: string | undefined, streetNumber: string | undefined): string {
+    let addressLine = '';
+
+    if (streetName) {
+      addressLine = streetName;
+    }
+
+    if (streetNumber) {
+      if (addressLine.length > 0) {
+        addressLine = `${addressLine} ${streetNumber}`;
+      } else {
+        addressLine = streetNumber;
+      }
+    }
+
+    return addressLine;
   }
 }
