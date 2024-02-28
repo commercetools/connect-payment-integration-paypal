@@ -50,7 +50,7 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
 
     const res = await fetch(url, options);
     if (!res.ok) {
-      const error = await res.json();
+      const error = await res.json().catch(() => ({})); // Graceful handling if JSON parsing fails
       throw new ErrorGeneral('not able to create a paypal order', {
         fields: {
           payPalCorrelationId: res.headers.get('paypal-debug-id'),
@@ -59,7 +59,11 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
         },
       });
     }
-    const data = await res.json();
+    const data = await res.json().catch(() => {
+      throw new ErrorGeneral(undefined, {
+        privateMessage: 'Failed to parse response JSON',
+      });
+    });
 
     return {
       outcome: PaymentModificationStatus.APPROVED,
@@ -82,7 +86,7 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
 
     const res = await fetch(url, options);
     if (!res.ok) {
-      const error = await res.json();
+      const error = await res.json().catch(() => ({})); // Graceful handling if JSON parsing fails
       throw new ErrorGeneral('not able to capture the paypal order', {
         fields: {
           payPalCorrelationId: res.headers.get('paypal-debug-id'),
@@ -91,7 +95,12 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
         },
       });
     }
-    const data = await res.json();
+    const data = await res.json().catch(() => {
+      throw new ErrorGeneral(undefined, {
+        privateMessage: 'Failed to parse response JSON',
+      });
+    });
+
     return this.convertCaptureOrderResponse(data);
   }
 
@@ -117,7 +126,7 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
 
     const res = await fetch(url, options);
     if (!res.ok) {
-      const error = await res.json();
+      const error = await res.json().catch(() => ({})); // Graceful handling if JSON parsing fails
       throw new ErrorGeneral('not able to partially refund a payment', {
         fields: {
           payPalCorrelationId: res.headers.get('paypal-debug-id'),
@@ -126,7 +135,12 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
         },
       });
     }
-    const data = await res.json();
+    const data = await res.json().catch(() => {
+      throw new ErrorGeneral(undefined, {
+        privateMessage: 'Failed to parse response JSON',
+      });
+    });
+
     return {
       outcome: PaymentModificationStatus.APPROVED,
       pspReference: data.id,
@@ -149,7 +163,7 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
 
     const res = await fetch(url, options);
     if (!res.ok) {
-      const error = await res.json();
+      const error = await res.json().catch(() => ({})); // Graceful handling if JSON parsing fails
       throw new ErrorGeneral('not able to fully refund a payment', {
         fields: {
           payPalCorrelationId: res.headers.get('paypal-debug-id'),
@@ -158,7 +172,12 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
         },
       });
     }
-    const data = await res.json();
+    const data = await res.json().catch(() => {
+      throw new ErrorGeneral(undefined, {
+        privateMessage: 'Failed to parse response JSON',
+      });
+    });
+
     return {
       outcome: PaymentModificationStatus.APPROVED,
       pspReference: data.id,
@@ -231,7 +250,7 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
 
     const res = await fetch(url, options);
     if (!res.ok) {
-      const error = await res.json();
+      const error = await res.json().catch(() => ({})); // Graceful handling if JSON parsing fails
       throw new ErrorGeneral('Error while authenticating with payment provider.', {
         privateMessage: 'error occurred due to failed authorization request to paypal',
         privateFields: {
@@ -240,7 +259,11 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
         },
       });
     }
-    const { access_token: accessToken } = await res.json();
+    const { access_token: accessToken } = await res.json().catch(() => {
+      throw new ErrorGeneral(undefined, {
+        privateMessage: 'Failed to parse response JSON',
+      });
+    });
 
     return {
       status: res.status,
