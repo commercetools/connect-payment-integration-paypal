@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import {
   paypalAuthenticationResponse,
   paypalAuthenticationClientErrorResponse,
@@ -6,13 +6,13 @@ import {
   paypalNotFoundResponse,
   paypalCreateOrderOkResponse,
   paypalRefundOkResponse,
-} from './testdata/paypalResponses';
-import { paypalCreateOrderRequest } from './testdata/paypalRequests';
-import { http, HttpHandler, HttpResponse } from 'msw';
+} from './utils/mock-paypal-response-data';
+import { paypalCreateOrderRequest } from './utils/mock-paypal-request-data';
 import { setupServer } from 'msw/node';
-import { PaypalPaymentAPI } from './api';
-import { PaymentModificationStatus } from '../../dtos/operations/payment-intents.dto';
-import { PaypalBasePath, PaypalUrls } from '../types/paypal-api.type';
+import { PaypalPaymentAPI } from '../src/services/api/api';
+import { PaymentModificationStatus } from '../src/dtos/operations/payment-intents.dto';
+import { PaypalBasePath, PaypalUrls } from '../src/services/types/paypal-api.type';
+import { mockPaypalRequest } from './utils/paypal-request.mock';
 
 describe('Paypal API', () => {
   const api = new PaypalPaymentAPI();
@@ -181,34 +181,4 @@ describe('Paypal API', () => {
 
 const resetTestLibs = () => {
   jest.resetAllMocks();
-};
-
-const mockPaypalRequest = (
-  basePath: string,
-  uri: string,
-  respCode: number,
-  data?: any,
-  hasQueryParameter?: boolean,
-): HttpHandler => {
-  return http.post(`${basePath}${uri}`, ({ request }) => {
-    if (hasQueryParameter) {
-      const url = new URL(request.url);
-      url.searchParams.set('grant_type', 'client_credentials');
-
-      new Request(url, request);
-    }
-
-    new HttpResponse(null, {
-      headers: {
-        'paypal-debug-id': '12345678',
-      },
-      status: respCode,
-    });
-    if (respCode > 200) {
-      return HttpResponse.json(null, {
-        status: respCode,
-      });
-    }
-    return HttpResponse.json(data);
-  });
 };
