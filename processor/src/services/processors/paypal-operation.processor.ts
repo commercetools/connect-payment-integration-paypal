@@ -1,5 +1,5 @@
+import { getConfig } from '../../config/config';
 import { ErrorGeneral, healthCheckCommercetoolsPermissions, statusHandler } from '@commercetools/connect-payments-sdk';
-import { config } from '../../config/config';
 import { paymentSDK } from '../../payment-sdk';
 import {
   CancelPaymentRequest,
@@ -21,19 +21,19 @@ export class PaypalOperationProcessor implements OperationProcessor {
 
   async config(): Promise<ConfigResponse> {
     return {
-      clientId: config.paypalClientId,
-      environment: config.paypalEnvironment,
+      clientId: getConfig().paypalClientId,
+      environment: getConfig().paypalEnvironment,
     };
   }
 
   async status(): Promise<StatusResponse> {
     const handler = await statusHandler({
-      timeout: config.healthCheckTimeout,
+      timeout: getConfig().healthCheckTimeout,
       checks: [
         healthCheckCommercetoolsPermissions({
           requiredPermissions: ['manage_project', 'manage_checkout_payment_intents'],
           ctAuthorizationService: paymentSDK.ctAuthorizationService,
-          projectKey: config.projectKey,
+          projectKey: getConfig().projectKey,
         }),
         async () => {
           try {
