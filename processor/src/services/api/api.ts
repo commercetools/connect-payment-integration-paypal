@@ -31,7 +31,7 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
       throw new ErrorGeneral();
     }
 
-    return res.json();
+    return res;
   }
 
   async createOrder(payload: CreateOrderRequest): Promise<PaymentProviderModificationResponse> {
@@ -87,6 +87,7 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
     const res = await fetch(url, options);
     if (!res.ok) {
       const error = await res.json().catch(() => ({})); // Graceful handling if JSON parsing fails
+
       throw new ErrorGeneral('not able to capture the paypal order', {
         fields: {
           payPalCorrelationId: res.headers.get('paypal-debug-id'),
