@@ -31,7 +31,7 @@ export class PaypalPaymentAPI implements IPaypalPaymentAPI {
       throw new ErrorGeneral();
     }
 
-    return res.json();
+    return res;
   }
 
   async createOrder(payload: CreateOrderRequest): Promise<PaymentProviderModificationResponse> {
