@@ -1,10 +1,15 @@
 import { SessionAuthenticationHook } from '@commercetools/connect-payments-sdk';
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import {
-  PaymentRequestSchema,
-  PaymentRequestSchemaDTO,
-  PaymentResponseSchema,
-  PaymentResponseSchemaDTO,
+  OrderRequestSchemaDTO,
+  OrderRequestSchema,
+  OrderResponseSchemaDTO,
+  OrderResponseSchema,
+  OrderCaptureRequestSchemaDTO,
+  OrderCaptureRequestSchema,
+  OrderCaptureResponseSchemaDTO,
+  OrderCaptureResponseSchema,
+  OrderCaptureParamsSchemaDTO,
 } from '../dtos/paypal-payment.dto';
 import { PaypalPaymentService } from '../services/paypal-payment.service';
 
@@ -14,23 +19,48 @@ type PaymentRoutesOptions = {
 };
 
 export const paymentRoutes = async (fastify: FastifyInstance, opts: FastifyPluginOptions & PaymentRoutesOptions) => {
-  fastify.post<{ Body: PaymentRequestSchemaDTO; Reply: PaymentResponseSchemaDTO }>(
-    '/payments',
+  fastify.post<{ Body: OrderRequestSchemaDTO; Reply: OrderResponseSchemaDTO }>(
+    '/checkout/orders',
     {
       preHandler: [opts.sessionAuthHook.authenticate()],
       schema: {
-        body: PaymentRequestSchema,
+        body: OrderRequestSchema,
         response: {
-          200: PaymentResponseSchema,
+          200: OrderResponseSchema,
         },
       },
     },
     async (request, reply) => {
-      const resp = await opts.paymentService.createPayment({
-        data: request.body,
-      });
+      const resp = await opts.paymentService.createPayment(request.body);
 
       return reply.status(200).send(resp);
+    },
+  );
+
+  fastify.post<{
+    Params: OrderCaptureParamsSchemaDTO;
+    Body: OrderCaptureRequestSchemaDTO;
+    Reply: OrderCaptureResponseSchemaDTO;
+  }>(
+    '/checkout/orders/:id/capture',
+    {
+      preHandler: [opts.sessionAuthHook.authenticate()],
+      schema: {
+        body: OrderCaptureRequestSchema,
+        response: {
+          200: OrderCaptureResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const resp = await opts.paymentService.confirmPayment({
+        data: {
+          ...request.body,
+          orderId: request.params.id,
+        },
+      });
+
+      return reply.status(201).send(resp);
     },
   );
 };
