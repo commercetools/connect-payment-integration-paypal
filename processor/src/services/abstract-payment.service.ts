@@ -139,6 +139,7 @@ export abstract class AbstractPaymentService {
 
     return {
       outcome: res.outcome,
+      paymentReference: res.pspReference,
     };
   }
 

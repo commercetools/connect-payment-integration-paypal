@@ -1,12 +1,6 @@
 import { describe, test, expect, afterEach, jest, afterAll, beforeAll, beforeEach } from '@jest/globals';
-import {
-  ConfigResponse,
-  OperationService,
-  OperationServiceOptions,
-  ModifyPayment,
-} from '../src/services/types/operation.type';
-import { DefaultOperationService } from '../src/services/operation.service';
-import { PaypalOperationProcessor } from '../src/services/processors/paypal-operation.processor';
+import { ConfigResponse, ModifyPayment } from '../src/services/types/operation.type';
+import { PaypalPaymentService } from '../src/services/paypal-payment.service';
 import { paymentSDK } from '../src/payment-sdk';
 import { DefaultPaymentService } from '@commercetools/connect-payments-sdk/dist/commercetools/services/ct-payment.service';
 import { mockGetPaymentResult, mockUpdatePaymentResult } from './utils/mock-payment-data';
@@ -31,11 +25,10 @@ function setupMockConfig(keysAndValues: Record<string, string>) {
 
 describe('operation.service', () => {
   const mockServer = setupServer();
-  const opts: OperationServiceOptions = {
-    operationProcessor: new PaypalOperationProcessor(),
+  const paymentService = new PaypalPaymentService({
     ctCartService: paymentSDK.ctCartService,
     ctPaymentService: paymentSDK.ctPaymentService,
-  };
+  });
 
   beforeAll(() => {
     mockServer.listen({
@@ -61,8 +54,8 @@ describe('operation.service', () => {
     // Setup mock config for a system using `clientKey`
     setupMockConfig({ paypalClientId: '', paypalEnvironment: 'test' });
 
-    const opService: OperationService = new DefaultOperationService(opts);
-    const result: ConfigResponse = await opService.getConfig();
+    // const opService: OperationService = new DefaultOperationService(opts);
+    const result: ConfigResponse = await paymentService.config();
 
     // Assertions can remain the same or be adapted based on the abstracted access
     expect(result?.clientId).toStrictEqual('');
@@ -70,8 +63,7 @@ describe('operation.service', () => {
   });
 
   test('getSupportedPaymentComponents', async () => {
-    const opService: OperationService = new DefaultOperationService(opts);
-    const result = await opService.getSupportedPaymentComponents();
+    const result = await paymentService.getSupportedPaymentComponents();
     expect(result?.components).toHaveLength(1);
     expect(result?.components[0]?.type).toStrictEqual('paypal');
   });
@@ -85,7 +77,6 @@ describe('operation.service', () => {
       mockPaypalRequest(PaypalBasePath.TEST, url, 201, paypalCaptureOrderOkResponse),
     );
 
-    const opService: OperationService = new DefaultOperationService(opts);
     const modifyPaymentOpts: ModifyPayment = {
       paymentId: 'dummy-paymentId',
       data: {
@@ -104,7 +95,7 @@ describe('operation.service', () => {
     jest.spyOn(DefaultPaymentService.prototype, 'getPayment').mockResolvedValue(mockGetPaymentResult);
     jest.spyOn(DefaultPaymentService.prototype, 'updatePayment').mockResolvedValue(mockUpdatePaymentResult);
 
-    const result = await opService.modifyPayment(modifyPaymentOpts);
+    const result = await paymentService.modifyPayment(modifyPaymentOpts);
     expect(result?.outcome).toStrictEqual('approved');
   });
 });

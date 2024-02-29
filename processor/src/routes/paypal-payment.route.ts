@@ -1,15 +1,15 @@
 import { SessionAuthenticationHook } from '@commercetools/connect-payments-sdk';
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import {
-  OrderRequestSchemaDTO,
-  OrderRequestSchema,
-  OrderResponseSchemaDTO,
-  OrderResponseSchema,
-  OrderCaptureRequestSchemaDTO,
-  OrderCaptureRequestSchema,
-  OrderCaptureResponseSchemaDTO,
-  OrderCaptureResponseSchema,
-  OrderCaptureParamsSchemaDTO,
+  CreateOrderRequestDTO,
+  CreateOrderResponseDTO,
+  CaptureOrderRequestDTO,
+  CaptureOrderResponseDTO,
+  CaptureOrderParamsDTO,
+  OrderRequest,
+  OrderResponse,
+  CaptureOrderResponse,
+  CaptureOrderRequest,
 } from '../dtos/paypal-payment.dto';
 import { PaypalPaymentService } from '../services/paypal-payment.service';
 
@@ -19,14 +19,14 @@ type PaymentRoutesOptions = {
 };
 
 export const paymentRoutes = async (fastify: FastifyInstance, opts: FastifyPluginOptions & PaymentRoutesOptions) => {
-  fastify.post<{ Body: OrderRequestSchemaDTO; Reply: OrderResponseSchemaDTO }>(
+  fastify.post<{ Body: CreateOrderRequestDTO; Reply: CreateOrderResponseDTO }>(
     '/checkout/orders',
     {
       preHandler: [opts.sessionAuthHook.authenticate()],
       schema: {
-        body: OrderRequestSchema,
+        body: OrderRequest,
         response: {
-          200: OrderResponseSchema,
+          200: OrderResponse,
         },
       },
     },
@@ -38,17 +38,17 @@ export const paymentRoutes = async (fastify: FastifyInstance, opts: FastifyPlugi
   );
 
   fastify.post<{
-    Params: OrderCaptureParamsSchemaDTO;
-    Body: OrderCaptureRequestSchemaDTO;
-    Reply: OrderCaptureResponseSchemaDTO;
+    Params: CaptureOrderParamsDTO;
+    Body: CaptureOrderRequestDTO;
+    Reply: CaptureOrderResponseDTO;
   }>(
     '/checkout/orders/:id/capture',
     {
       preHandler: [opts.sessionAuthHook.authenticate()],
       schema: {
-        body: OrderCaptureRequestSchema,
+        body: CaptureOrderRequest,
         response: {
-          200: OrderCaptureResponseSchema,
+          200: CaptureOrderResponse,
         },
       },
     },

@@ -9,13 +9,13 @@ import {
 } from './utils/mock-paypal-response-data';
 import { paypalCreateOrderRequest } from './utils/mock-paypal-request-data';
 import { setupServer } from 'msw/node';
-import { PaypalPaymentAPI } from '../src/services/api/api';
+import { PaypalAPI } from '../src/clients/paypal.client';
 import { PaymentModificationStatus } from '../src/dtos/operations/payment-intents.dto';
 import { PaypalBasePath, PaypalUrls } from '../src/services/types/paypal-api.type';
 import { mockPaypalRequest } from './utils/paypal-request.mock';
 
 describe('Paypal API', () => {
-  const api = new PaypalPaymentAPI();
+  const api = new PaypalAPI();
   const mockServer = setupServer();
 
   beforeAll(() => {
@@ -68,7 +68,7 @@ describe('Paypal API', () => {
       const result = api.authenticateRequest();
 
       // then
-      await expect(result).rejects.toThrow('Error while authenticating with payment provider.');
+      await expect(result).rejects.toThrow('Client Authentication failed');
     });
   });
 
@@ -120,7 +120,7 @@ describe('Paypal API', () => {
       const result = api.captureOrder(orderId);
 
       // then
-      await expect(result).rejects.toThrow('not able to capture the paypal order');
+      await expect(result).rejects.toThrow('an error occurred in paypal');
     });
   });
 
@@ -164,7 +164,7 @@ describe('Paypal API', () => {
     it('should return an error when PayPal return a not found error', async () => {
       // Given
       const captureId = paypalCaptureOrderOkResponse.purchase_units[0].payments.captures[0].id;
-      const url = PaypalUrls.ORDERS_CAPTURE.replace(/{resourceId}/g, captureId);
+      const url = PaypalUrls.ORDERS_REFUND.replace(/{resourceId}/g, captureId);
       mockServer.use(
         mockPaypalRequest(PaypalBasePath.TEST, `${PaypalUrls.AUTHENTICATION}`, 200, paypalAuthenticationResponse),
         mockPaypalRequest(PaypalBasePath.TEST, url, 404, paypalNotFoundResponse),
@@ -174,7 +174,7 @@ describe('Paypal API', () => {
       const result = api.refundFullPayment(captureId);
 
       // then
-      await expect(result).rejects.toThrow('not able to fully refund a payment');
+      await expect(result).rejects.toThrow('an error occurred in paypal');
     });
   });
 });

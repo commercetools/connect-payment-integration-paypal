@@ -12,7 +12,7 @@ export enum Intent {
 
 export const PaymentOutcomeSchema = Type.Enum(PaymentOutcome);
 
-export const OrderRequestSchema = Type.Object({
+export const OrderRequest = Type.Object({
   intent: Type.Enum(Intent),
   payment_source: Type.Object({
     paypal: Type.Object({
@@ -26,28 +26,28 @@ export const OrderRequestSchema = Type.Object({
   }),
 });
 
-export const OrderResponseSchema = Type.Object({
+export const OrderResponse = Type.Object({
   id: Type.String(),
   paymentReference: Type.String(),
 });
 
-export const OrderCaptureRequestSchema = Type.Object({
+export const CaptureOrderRequest = Type.Object({
   paymentReference: Type.String(),
 });
 
-export const OrderCaptureResponseSchema = Type.Object({
+export const CaptureOrderResponse = Type.Object({
   id: Type.String(),
   paymentReference: Type.String(),
 });
 
-export const OrderCaptureParamsSchema = Type.Object({
+export const CaptureOrderParams = Type.Object({
   id: Type.String(),
 });
 
-export type OrderRequestSchemaDTO = Static<typeof OrderRequestSchema>;
-export type OrderResponseSchemaDTO = Static<typeof OrderResponseSchema>;
+export type CreateOrderRequestDTO = Static<typeof OrderRequest>;
+export type CreateOrderResponseDTO = Static<typeof OrderResponse>;
 
-export type OrderCaptureRequestSchemaDTO = Static<typeof OrderCaptureRequestSchema>;
-export type OrderCaptureResponseSchemaDTO = Static<typeof OrderCaptureResponseSchema>;
+export type CaptureOrderRequestDTO = Static<typeof CaptureOrderRequest>;
+export type CaptureOrderResponseDTO = Static<typeof CaptureOrderResponse>;
 
-export type OrderCaptureParamsSchemaDTO = Static<typeof OrderCaptureParamsSchema>;
+export type CaptureOrderParamsDTO = Static<typeof CaptureOrderParams>;

@@ -1,7 +1,7 @@
-import { OrderCaptureRequestSchemaDTO, PaymentOutcome } from '../../dtos/paypal-payment.dto';
+import { CaptureOrderRequestDTO, PaymentOutcome } from '../../dtos/paypal-payment.dto';
 
 export type OrderConfirmation = {
-  data: OrderCaptureRequestSchemaDTO & { orderId: string };
+  data: CaptureOrderRequestDTO & { orderId: string };
 };
 
 export type PaypalPaymentProviderResponse = {
