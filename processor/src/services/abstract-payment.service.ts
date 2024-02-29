@@ -18,7 +18,6 @@ import {
   PaymentIntentResponseSchemaDTO,
   PaymentModificationStatus,
 } from '../dtos/operations/payment-intents.dto';
-
 import { Payment } from '@commercetools/platform-sdk';
 import { SupportedPaymentComponentsSchemaDTO } from '../dtos/operations/payment-componets.dto';
 
@@ -139,6 +138,7 @@ export abstract class AbstractPaymentService {
 
     return {
       outcome: res.outcome,
+      paymentReference: res.pspReference,
     };
   }
 

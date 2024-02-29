@@ -1,7 +1,7 @@
 import { paymentSDK } from '../payment-sdk';
-import { MockPaymentService } from '../services/mock-payment.service';
+import { PaypalPaymentService } from '../services/paypal-payment.service';
 
-const paymentService = new MockPaymentService({
+const paymentService = new PaypalPaymentService({
   ctCartService: paymentSDK.ctCartService,
   ctPaymentService: paymentSDK.ctPaymentService,
 });

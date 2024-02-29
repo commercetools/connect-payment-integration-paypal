@@ -2,39 +2,114 @@ import {
   CommercetoolsCartService,
   CommercetoolsPaymentService,
   ErrorGeneral,
+  healthCheckCommercetoolsPermissions,
+  statusHandler,
 } from '@commercetools/connect-payments-sdk';
 import {
-  OrderRequestSchemaDTO,
-  OrderResponseSchemaDTO,
+  CreateOrderRequestDTO,
+  CreateOrderResponseDTO,
+  CaptureOrderResponseDTO,
   PaymentOutcome,
-  OrderCaptureResponseSchemaDTO,
 } from '../dtos/paypal-payment.dto';
 
 import { getCartIdFromContext } from '../libs/fastify/context/context';
-import { PaypalPaymentAPI } from './api/api';
+import { PaypalAPI } from '../clients/paypal.client';
 import { Address, Cart, Money, Payment } from '@commercetools/platform-sdk';
 import { CreateOrderRequest, PaypalShipping, parseAmount } from './types/paypal-api.type';
 import { PaymentModificationStatus } from '../dtos/operations/payment-intents.dto';
 import { randomUUID } from 'crypto';
 import { OrderConfirmation } from './types/paypal-payment.type';
+import { getConfig } from '../config/config';
+import {
+  CancelPaymentRequest,
+  CapturePaymentRequest,
+  ConfigResponse,
+  PaymentProviderModificationResponse,
+  RefundPaymentRequest,
+  StatusResponse,
+} from './types/operation.type';
+import { paymentSDK } from '../payment-sdk';
+import { SupportedPaymentComponentsSchemaDTO } from '../dtos/operations/payment-componets.dto';
+import { AbstractPaymentService } from './abstract-payment.service';
+const packageJSON = require('../../package.json');
 
 export type PaypalPaymentServiceOptions = {
   ctCartService: CommercetoolsCartService;
   ctPaymentService: CommercetoolsPaymentService;
 };
 
-export class PaypalPaymentService {
-  private ctCartService: CommercetoolsCartService;
-  private ctPaymentService: CommercetoolsPaymentService;
-  private paypalClient: PaypalPaymentAPI;
+export class PaypalPaymentService extends AbstractPaymentService {
+  private paypalClient: PaypalAPI;
 
   constructor(opts: PaypalPaymentServiceOptions) {
-    this.ctCartService = opts.ctCartService;
-    this.ctPaymentService = opts.ctPaymentService;
-    this.paypalClient = new PaypalPaymentAPI();
+    super(opts.ctCartService, opts.ctPaymentService);
+    this.paypalClient = new PaypalAPI();
   }
 
-  public async createPayment(data: OrderRequestSchemaDTO): Promise<OrderResponseSchemaDTO> {
+  async config(): Promise<ConfigResponse> {
+    return {
+      clientId: getConfig().paypalClientId,
+      environment: getConfig().paypalEnvironment,
+    };
+  }
+
+  async status(): Promise<StatusResponse> {
+    const handler = await statusHandler({
+      timeout: getConfig().healthCheckTimeout,
+      checks: [
+        healthCheckCommercetoolsPermissions({
+          requiredPermissions: ['manage_project', 'manage_checkout_payment_intents'],
+          ctAuthorizationService: paymentSDK.ctAuthorizationService,
+          projectKey: getConfig().projectKey,
+        }),
+        async () => {
+          try {
+            const healthCheck = await this.paypalClient.healthCheck();
+            if (healthCheck?.status === 200) {
+              const paymentMethods = 'paypal';
+              return {
+                name: 'Paypal Payment API',
+                status: 'UP',
+                details: {
+                  paymentMethods,
+                },
+              };
+            } else {
+              throw new Error(healthCheck?.statusText);
+            }
+          } catch (e) {
+            return {
+              name: 'Paypal Payment API',
+              status: 'DOWN',
+              details: {
+                // TODO do not expose the error
+                error: (e as Error)?.message,
+              },
+            };
+          }
+        },
+      ],
+      metadataFn: async () => ({
+        name: packageJSON.name,
+        description: packageJSON.description,
+        '@commercetools/sdk-client-v2': packageJSON.dependencies['@commercetools/sdk-client-v2'],
+      }),
+    })();
+
+    return handler.body;
+  }
+
+  public async getSupportedPaymentComponents(): Promise<SupportedPaymentComponentsSchemaDTO> {
+    return {
+      components: [
+        {
+          type: 'paypal',
+        },
+      ],
+    };
+  }
+
+  public async createPayment(data: CreateOrderRequestDTO): Promise<CreateOrderResponseDTO> {
     const ctCart = await this.ctCartService.getCart({
       id: getCartIdFromContext(),
     });
@@ -67,7 +142,6 @@ export class PaypalPaymentService {
     const paypalRequestData = this.convertCreatePaymentIntentRequest(ctCart, amountPlanned, data);
     const paypalResponse = await this.paypalClient.createOrder(paypalRequestData);
 
-    // TODO: we need to remove dependency on this enum belonging to payment intents
     const isAuthorized = paypalResponse.outcome === PaymentModificationStatus.APPROVED;
 
     const resultCode = isAuthorized ? PaymentOutcome.AUTHORIZED : PaymentOutcome.REJECTED;
@@ -90,7 +164,7 @@ export class PaypalPaymentService {
     };
   }
 
-  public async confirmPayment(opts: OrderConfirmation): Promise<OrderCaptureResponseSchemaDTO> {
+  public async confirmPayment(opts: OrderConfirmation): Promise<CaptureOrderResponseDTO> {
     const ctPayment = await this.ctPaymentService.getPayment({
       id: opts.data.paymentReference,
     });
@@ -125,7 +199,7 @@ export class PaypalPaymentService {
         paymentReference: updatedPayment.id,
       };
     } catch (e) {
-      // TODO: create a new method in payment sdk for changing transaction stat. To be used in scenarios, where we expect the txn state to change,
+      // TODO: create a new method in payment sdk for changing transaction state. To be used in scenarios, where we expect the txn state to change,
       // from initial, to success to failure https://docs.commercetools.com/api/projects/payments#change-transactionstate
       await this.ctPaymentService.updatePayment({
         id: ctPayment.id,
@@ -138,6 +212,33 @@ export class PaypalPaymentService {
 
       throw e;
     }
+  }
+
+  async capturePayment(request: CapturePaymentRequest): Promise<PaymentProviderModificationResponse> {
+    return await this.paypalClient.captureOrder(request.payment.interfaceId);
+  }
+
+  async cancelPayment(request: CancelPaymentRequest): Promise<PaymentProviderModificationResponse> {
+    throw new ErrorGeneral('operation not supported', {
+      fields: {
+        pspReference: request.payment.interfaceId,
+      },
+      privateMessage: "connector doesn't support cancel operation",
+    });
+  }
+
+  async refundPayment(request: RefundPaymentRequest): Promise<PaymentProviderModificationResponse> {
+    const transaction = request.payment.transactions.find((t) => t.type === 'Charge' && t.state === 'Success');
+    const captureId = transaction?.interactionId;
+    if (this.isPartialRefund(request)) {
+      return this.paypalClient.refundPartialPayment(captureId, request.amount);
+    }
+
+    return this.paypalClient.refundFullPayment(captureId);
+  }
+
+  private isPartialRefund(request: RefundPaymentRequest): boolean {
+    return request.payment.amountPlanned.centAmount > request.amount.centAmount;
   }
 
   private validateInterfaceIdMismatch(payment: Payment, orderId: string) {
@@ -166,7 +267,7 @@ export class PaypalPaymentService {
   private convertCreatePaymentIntentRequest(
     cart: Cart,
     amount: Money,
-    payload: OrderRequestSchemaDTO,
+    payload: CreateOrderRequestDTO,
   ): CreateOrderRequest {
     return {
       ...payload,
