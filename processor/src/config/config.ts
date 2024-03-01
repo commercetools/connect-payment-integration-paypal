@@ -17,6 +17,7 @@ export const config = {
   paypalClientId: process.env.PAYPAL_CLIENT_ID || 'xxx',
   paypalClientSecret: process.env.PAYPAL_CLIENT_SECRET || 'xxxx',
   paypalEnvironment: process.env.PAYPAL_ENVIRONMENT || 'test',
+  paypalWebhookId: process.env.PAYPAL_WEBHOOK_ID || '',
 
   // Payment Providers config
   returnUrl: process.env.RETURN_URL,

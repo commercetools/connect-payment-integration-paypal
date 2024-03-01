@@ -16,9 +16,17 @@ deployAs:
           description: Commercetools API URL
         - key: CTP_SESSION_URL
           description: Session API URL
+        - key: PAYPAL_CLIENT_ID
+          description: Paypal client ID
+        - key: PAYPAL_WEBHOOK_ID
+          description: Paypal webhook ID, generated from merchant dashboard
+        - key: PAYPAL_ENVIRONMENT
+          description: Payment environment (live/test)
       securedConfiguration:
         - key: CTP_CLIENT_SECRET
           description: Commercetools client secret
+        - key: PAYPAL_CLIENT_SECRET
+          description: Paypal client secret
   - name: enabler
     applicationType: service
     endpoint: /

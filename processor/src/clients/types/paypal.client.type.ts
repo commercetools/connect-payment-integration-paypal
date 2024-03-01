@@ -13,6 +13,12 @@ export enum PaypalUrls {
   ORDERS = '/v2/checkout/orders',
   ORDERS_CAPTURE = '/v2/checkout/orders/{resourceId}/capture',
   ORDERS_REFUND = '/v2/payments/captures/{resourceId}/refund',
+  NOTIFICATION_VERIFY = '/v1/notifications/verify-webhook-signature',
+}
+
+export enum VerificationStatus {
+  SUCCESS = 'SUCCESS',
+  FAILURE = 'FAILURE',
 }
 
 export type AuthenticationResponse = {
@@ -91,6 +97,20 @@ export type CreateOrderRequest = {
       };
     };
   };
+};
+
+export type NotificationVerificationRequest = {
+  auth_algo: string;
+  cert_url: string;
+  transmission_id: string;
+  transmission_sig: string;
+  transmission_time: string;
+  webhook_id: string;
+  webhook_event: Record<string, any>;
+};
+
+export type NotificationVerificationResponse = {
+  verification_status: VerificationStatus;
 };
 
 export const parseAmount = (amountInCents: number): string => {
