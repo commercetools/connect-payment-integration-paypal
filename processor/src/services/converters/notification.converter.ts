@@ -49,8 +49,8 @@ export class NotificationConverter {
 
   private convertAmount(item: NotificationResourceDTO): Money {
     return {
-      centAmount: this.parseStringAmountToCentAmount(item.amount.total),
-      currencyCode: item.amount.currency,
+      centAmount: this.parseStringAmountToCentAmount(item.amount.value),
+      currencyCode: item.amount.currency_code,
     };
   }
 
