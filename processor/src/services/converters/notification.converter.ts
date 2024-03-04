@@ -45,6 +45,7 @@ export class NotificationConverter {
         throw new ErrorGeneral('Unsupported event type', {
           fields: {
             event_type: item.event_type,
+            payment_id: item.resource.invoice_id,
           },
         });
     }
@@ -60,7 +61,11 @@ export class NotificationConverter {
   private parseStringAmountToCentAmount(amount: string): number {
     const [units, cents] = amount.split('.').map((part) => parseInt(part, 10));
     if (isNaN(units) || isNaN(cents)) {
-      throw new Error(`Invalid amount format: ${amount}`);
+      throw new ErrorGeneral('Invalid amount format', {
+        fields: {
+          amount: amount,
+        },
+      });
     }
 
     return units * 100 + cents;
