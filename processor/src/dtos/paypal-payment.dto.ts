@@ -24,8 +24,8 @@ export const NotificationResource = Type.Object({
   status: Type.String(),
   invoice_id: Type.String(),
   amount: Type.Object({
-    total: Type.String(),
-    currency: Type.String(),
+    value: Type.String(),
+    currency_code: Type.String(),
   }),
 });
 
