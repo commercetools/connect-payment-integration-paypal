@@ -1,4 +1,4 @@
-import { TransactionData, UpdatePayment } from '@commercetools/connect-payments-sdk';
+import { ErrorGeneral, TransactionData, UpdatePayment } from '@commercetools/connect-payments-sdk';
 import { COCOTransactionStates, COCOTransactionTypes, NotificationEventType } from '../types/paypal-payment.type';
 import { Money } from '@commercetools/platform-sdk';
 import { NotificationPayloadDTO, NotificationResourceDTO } from '../../dtos/paypal-payment.dto';
@@ -42,8 +42,11 @@ export class NotificationConverter {
           interactionId: item.resource.id,
         };
       default:
-        // TODO: improve this error handling
-        throw new Error('Unsupported');
+        throw new ErrorGeneral('Unsupported event type', {
+          fields: {
+            event_type: item.event_type,
+          },
+        });
     }
   }
 
