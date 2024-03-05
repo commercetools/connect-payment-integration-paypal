@@ -1,14 +1,17 @@
 import { describe, test, expect, afterEach, jest, afterAll, beforeAll, beforeEach } from '@jest/globals';
 import { ConfigResponse, ModifyPayment } from '../src/services/types/operation.type';
-import { PaypalPaymentService } from '../src/services/paypal-payment.service';
+
 import { paymentSDK } from '../src/payment-sdk';
 import { DefaultPaymentService } from '@commercetools/connect-payments-sdk/dist/commercetools/services/ct-payment.service';
 import { mockGetPaymentResult, mockUpdatePaymentResult } from './utils/mock-payment-data';
 import * as Config from '../src/config/config';
+import { PaypalPaymentServiceOptions } from '../src/services/types/paypal-payment.type';
+import { AbstractPaymentService } from '../src/services/abstract-payment.service';
+import { PaypalPaymentService } from '../src/services/paypal-payment.service';
 import { setupServer } from 'msw/node';
+import { PaypalUrls, PaypalBasePath } from '../src/clients/types/paypal.client.type';
 import { paypalAuthenticationResponse, paypalCaptureOrderOkResponse } from './utils/mock-paypal-response-data';
 import { mockPaypalRequest } from './utils/paypal-request.mock';
-import { PaypalUrls, PaypalBasePath } from '../src/clients/types/paypal.client.type';
 
 interface FlexibleConfig {
   [key: string]: string | number | undefined; // Adjust the type according to your config values
@@ -23,12 +26,13 @@ function setupMockConfig(keysAndValues: Record<string, string>) {
   jest.spyOn(Config, 'getConfig').mockReturnValue(mockConfig as any);
 }
 
-describe('operation.service', () => {
+describe('paypal-payment.service', () => {
   const mockServer = setupServer();
-  const paymentService = new PaypalPaymentService({
+  const opts: PaypalPaymentServiceOptions = {
     ctCartService: paymentSDK.ctCartService,
     ctPaymentService: paymentSDK.ctPaymentService,
-  });
+  };
+  const paymentService: AbstractPaymentService = new PaypalPaymentService(opts);
 
   beforeAll(() => {
     mockServer.listen({

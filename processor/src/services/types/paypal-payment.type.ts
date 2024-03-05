@@ -1,3 +1,4 @@
+import { CommercetoolsCartService, CommercetoolsPaymentService } from '@commercetools/connect-payments-sdk';
 import { CaptureOrderRequestDTO } from '../../dtos/paypal-payment.dto';
 
 export type OrderConfirmation = {
@@ -8,6 +9,11 @@ export enum PaymentOutcome {
   AUTHORIZED = 'Authorized',
   REJECTED = 'Rejected',
 }
+
+export type PaypalPaymentServiceOptions = {
+  ctCartService: CommercetoolsCartService;
+  ctPaymentService: CommercetoolsPaymentService;
+};
 
 export enum TransactionStates {
   SUCCESS = 'Success',

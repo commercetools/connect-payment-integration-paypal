@@ -1,10 +1,4 @@
-import {
-  CommercetoolsCartService,
-  CommercetoolsPaymentService,
-  ErrorGeneral,
-  healthCheckCommercetoolsPermissions,
-  statusHandler,
-} from '@commercetools/connect-payments-sdk';
+import { ErrorGeneral, healthCheckCommercetoolsPermissions, statusHandler } from '@commercetools/connect-payments-sdk';
 import {
   CreateOrderRequestDTO,
   CreateOrderResponseDTO,
@@ -18,7 +12,12 @@ import { Address, Cart, Money, Payment } from '@commercetools/platform-sdk';
 import { CreateOrderRequest, PaypalShipping, parseAmount } from '../clients/types/paypal.client.type';
 import { PaymentModificationStatus } from '../dtos/operations/payment-intents.dto';
 import { randomUUID } from 'crypto';
-import { TransactionStates, OrderConfirmation, PaymentOutcome } from './types/paypal-payment.type';
+import {
+  TransactionStates,
+  OrderConfirmation,
+  PaymentOutcome,
+  PaypalPaymentServiceOptions,
+} from './types/paypal-payment.type';
 import { getConfig } from '../config/config';
 import {
   CancelPaymentRequest,
@@ -33,11 +32,6 @@ import { SupportedPaymentComponentsSchemaDTO } from '../dtos/operations/payment-
 import { AbstractPaymentService } from './abstract-payment.service';
 import { NotificationConverter } from './converters/notification.converter';
 const packageJSON = require('../../package.json');
-
-export type PaypalPaymentServiceOptions = {
-  ctCartService: CommercetoolsCartService;
-  ctPaymentService: CommercetoolsPaymentService;
-};
 
 export class PaypalPaymentService extends AbstractPaymentService {
   private paypalClient: PaypalAPI;
