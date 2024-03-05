@@ -10,12 +10,16 @@ import {
   OrderResponse,
   CaptureOrderResponse,
   CaptureOrderRequest,
+  NotificationPayloadDTO,
+  NotificationPayload,
 } from '../dtos/paypal-payment.dto';
 import { PaypalPaymentService } from '../services/paypal-payment.service';
+import { WebhookVerificationHook } from '../libs/fastify/hooks/paypal-webhook-verification';
 
 type PaymentRoutesOptions = {
   paymentService: PaypalPaymentService;
   sessionAuthHook: SessionAuthenticationHook;
+  signatureAuthHook: WebhookVerificationHook;
 };
 
 export const paymentRoutes = async (fastify: FastifyInstance, opts: FastifyPluginOptions & PaymentRoutesOptions) => {
@@ -61,6 +65,24 @@ export const paymentRoutes = async (fastify: FastifyInstance, opts: FastifyPlugi
       });
 
       return reply.status(201).send(resp);
+    },
+  );
+
+  fastify.post<{
+    Body: NotificationPayloadDTO;
+  }>(
+    '/notifications',
+    {
+      preHandler: [opts.signatureAuthHook.authenticate()],
+      schema: {
+        body: NotificationPayload,
+      },
+    },
+    async (request, reply) => {
+      await opts.paymentService.processNotification({
+        data: request.body,
+      });
+      return reply.status(200).send('[accepted]');
     },
   );
 };

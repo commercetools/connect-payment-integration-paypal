@@ -1,16 +1,9 @@
 import { Static, Type } from '@sinclair/typebox';
 
-export enum PaymentOutcome {
-  AUTHORIZED = 'Authorized',
-  REJECTED = 'Rejected',
-}
-
 export enum Intent {
   CAPTURE = 'CAPTURE',
   AUTHORIZE = 'AUTHORIZE',
 }
-
-export const PaymentOutcomeSchema = Type.Enum(PaymentOutcome);
 
 export const OrderRequest = Type.Object({
   intent: Type.Enum(Intent),
@@ -24,6 +17,23 @@ export const OrderRequest = Type.Object({
       }),
     }),
   }),
+});
+
+export const NotificationResource = Type.Object({
+  id: Type.String(),
+  status: Type.String(),
+  invoice_id: Type.String(),
+  amount: Type.Object({
+    value: Type.String(),
+    currency_code: Type.String(),
+  }),
+});
+
+export const NotificationPayload = Type.Object({
+  id: Type.String(),
+  resource_type: Type.String(),
+  event_type: Type.String(),
+  resource: NotificationResource,
 });
 
 export const OrderResponse = Type.Object({
@@ -51,3 +61,6 @@ export type CaptureOrderRequestDTO = Static<typeof CaptureOrderRequest>;
 export type CaptureOrderResponseDTO = Static<typeof CaptureOrderResponse>;
 
 export type CaptureOrderParamsDTO = Static<typeof CaptureOrderParams>;
+
+export type NotificationPayloadDTO = Static<typeof NotificationPayload>;
+export type NotificationResourceDTO = Static<typeof NotificationResource>;

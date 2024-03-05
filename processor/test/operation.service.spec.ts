@@ -6,9 +6,9 @@ import { DefaultPaymentService } from '@commercetools/connect-payments-sdk/dist/
 import { mockGetPaymentResult, mockUpdatePaymentResult } from './utils/mock-payment-data';
 import * as Config from '../src/config/config';
 import { setupServer } from 'msw/node';
-import { PaypalBasePath, PaypalUrls } from '../src/services/types/paypal-api.type';
 import { paypalAuthenticationResponse, paypalCaptureOrderOkResponse } from './utils/mock-paypal-response-data';
 import { mockPaypalRequest } from './utils/paypal-request.mock';
+import { PaypalUrls, PaypalBasePath } from '../src/clients/types/paypal.client.type';
 
 interface FlexibleConfig {
   [key: string]: string | number | undefined; // Adjust the type according to your config values

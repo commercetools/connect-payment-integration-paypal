@@ -11,8 +11,8 @@ import { paypalCreateOrderRequest } from './utils/mock-paypal-request-data';
 import { setupServer } from 'msw/node';
 import { PaypalAPI } from '../src/clients/paypal.client';
 import { PaymentModificationStatus } from '../src/dtos/operations/payment-intents.dto';
-import { PaypalBasePath, PaypalUrls } from '../src/services/types/paypal-api.type';
 import { mockPaypalRequest } from './utils/paypal-request.mock';
+import { PaypalBasePath, PaypalUrls } from '../src/clients/types/paypal.client.type';
 
 describe('Paypal API', () => {
   const api = new PaypalAPI();

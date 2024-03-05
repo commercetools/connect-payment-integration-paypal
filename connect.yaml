@@ -6,19 +6,38 @@ deployAs:
       standardConfiguration:
         - key: CTP_PROJECT_KEY
           description: Commercetools project key
+          required: true
         - key: CTP_CLIENT_ID
           description: Commercetools client ID
+          required: true
         - key: CTP_SCOPE
           description: Commercetools client scope
+          required: true
         - key: CTP_AUTH_URL
           description: Commercetools Auth URL
+          required: true
         - key: CTP_API_URL
           description: Commercetools API URL
+          required: true
         - key: CTP_SESSION_URL
           description: Session API URL
+          required: true
+        - key: PAYPAL_CLIENT_ID
+          description: Paypal client ID
+          required: true
+        - key: PAYPAL_WEBHOOK_ID
+          description: Paypal webhook ID
+          required: true
+        - key: PAYPAL_ENVIRONMENT
+          description: Payment environment (live/test)
+          required: true
       securedConfiguration:
         - key: CTP_CLIENT_SECRET
           description: Commercetools client secret
+          required: true
+        - key: PAYPAL_CLIENT_SECRET
+          description: Paypal client secret
+          required: true
   - name: enabler
     applicationType: service
     endpoint: /
