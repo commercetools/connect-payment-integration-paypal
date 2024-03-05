@@ -1,10 +1,4 @@
-import {
-  CommercetoolsCartService,
-  CommercetoolsPaymentService,
-  ErrorGeneral,
-  healthCheckCommercetoolsPermissions,
-  statusHandler,
-} from '@commercetools/connect-payments-sdk';
+import { ErrorGeneral, healthCheckCommercetoolsPermissions, statusHandler } from '@commercetools/connect-payments-sdk';
 import {
   CreateOrderRequestDTO,
   CreateOrderResponseDTO,
@@ -12,13 +6,18 @@ import {
   NotificationPayloadDTO,
 } from '../dtos/paypal-payment.dto';
 
-import { getCartIdFromContext } from '../libs/fastify/context/context';
+import { getCartIdFromContext, getPaymentInterfaceFromContext } from '../libs/fastify/context/context';
 import { PaypalAPI } from '../clients/paypal.client';
 import { Address, Cart, Money, Payment } from '@commercetools/platform-sdk';
 import { CreateOrderRequest, PaypalShipping, parseAmount } from '../clients/types/paypal.client.type';
 import { PaymentModificationStatus } from '../dtos/operations/payment-intents.dto';
 import { randomUUID } from 'crypto';
-import { TransactionStates, OrderConfirmation, PaymentOutcome } from './types/paypal-payment.type';
+import {
+  TransactionStates,
+  OrderConfirmation,
+  PaymentOutcome,
+  PaypalPaymentServiceOptions,
+} from './types/paypal-payment.type';
 import { getConfig } from '../config/config';
 import {
   CancelPaymentRequest,
@@ -34,11 +33,6 @@ import { AbstractPaymentService } from './abstract-payment.service';
 import { NotificationConverter } from './converters/notification.converter';
 const packageJSON = require('../../package.json');
 
-export type PaypalPaymentServiceOptions = {
-  ctCartService: CommercetoolsCartService;
-  ctPaymentService: CommercetoolsPaymentService;
-};
-
 export class PaypalPaymentService extends AbstractPaymentService {
   private paypalClient: PaypalAPI;
   private notificationConverter: NotificationConverter;
@@ -49,6 +43,14 @@ export class PaypalPaymentService extends AbstractPaymentService {
     this.notificationConverter = new NotificationConverter();
   }
 
+  /**
+   * Get configurations
+   *
+   * @remarks
+   * Implementation to provide mocking configuration information
+   *
+   * @returns Promise with mocking object containing configuration information
+   */
   async config(): Promise<ConfigResponse> {
     return {
       clientId: getConfig().paypalClientId,
@@ -56,6 +58,14 @@ export class PaypalPaymentService extends AbstractPaymentService {
     };
   }
 
+  /**
+   * Get status
+   *
+   * @remarks
+   * Implementation to provide mocking status of external systems
+   *
+   * @returns Promise with mocking data containing a list of status from different external systems
+   */
   async status(): Promise<StatusResponse> {
     const handler = await statusHandler({
       timeout: getConfig().healthCheckTimeout,
@@ -102,6 +112,14 @@ export class PaypalPaymentService extends AbstractPaymentService {
     return handler.body;
   }
 
+  /**
+   * Get supported payment components
+   *
+   * @remarks
+   * Implementation to provide the mocking payment components supported by the processor.
+   *
+   * @returns Promise with mocking data containing a list of supported payment components
+   */
   public async getSupportedPaymentComponents(): Promise<SupportedPaymentComponentsSchemaDTO> {
     return {
       components: [
@@ -112,6 +130,15 @@ export class PaypalPaymentService extends AbstractPaymentService {
     };
   }
 
+  /**
+   * Create payment
+   *
+   * @remarks
+   * Implementation to provide the mocking data for payment creation in external PSPs
+   *
+   * @param request - contains amount and {@link https://docs.commercetools.com/api/projects/payments | Payment } defined in composable commerce
+   * @returns Promise with mocking data containing order id and PSP reference
+   */
   public async createPayment(data: CreateOrderRequestDTO): Promise<CreateOrderResponseDTO> {
     const ctCart = await this.ctCartService.getCart({
       id: getCartIdFromContext(),
@@ -123,7 +150,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
     const ctPayment = await this.ctPaymentService.createPayment({
       amountPlanned,
       paymentMethodInfo: {
-        paymentInterface: 'paypal',
+        paymentInterface: getPaymentInterfaceFromContext() || 'paypal',
       },
       ...(ctCart.customerId && {
         customer: {
@@ -225,10 +252,28 @@ export class PaypalPaymentService extends AbstractPaymentService {
     await this.ctPaymentService.updatePayment(updateData);
   }
 
+  /**
+   * Capture payment
+   *
+   * @remarks
+   * Implementation to provide the mocking data for payment capture in external PSPs
+   *
+   * @param request - contains the amount and {@link https://docs.commercetools.com/api/projects/payments | Payment } defined in composable commerce
+   * @returns Promise with mocking data containing operation status and PSP reference
+   */
   async capturePayment(request: CapturePaymentRequest): Promise<PaymentProviderModificationResponse> {
     return await this.paypalClient.captureOrder(request.payment.interfaceId);
   }
 
+  /**
+   * Cancel payment
+   *
+   * @remarks
+   * Implementation to provide the mocking data for payment cancel in external PSPs
+   *
+   * @param request - contains {@link https://docs.commercetools.com/api/projects/payments | Payment } defined in composable commerce
+   * @returns Promise with mocking data containing operation status and PSP reference
+   */
   async cancelPayment(request: CancelPaymentRequest): Promise<PaymentProviderModificationResponse> {
     throw new ErrorGeneral('operation not supported', {
       fields: {
@@ -238,6 +283,15 @@ export class PaypalPaymentService extends AbstractPaymentService {
     });
   }
 
+  /**
+   * Refund payment
+   *
+   * @remarks
+   * Implementation to provide the mocking data for payment refund in external PSPs
+   *
+   * @param request - contains amount and {@link https://docs.commercetools.com/api/projects/payments | Payment } defined in composable commerce
+   * @returns Promise with mocking data containing operation status and PSP reference
+   */
   async refundPayment(request: RefundPaymentRequest): Promise<PaymentProviderModificationResponse> {
     const transaction = request.payment.transactions.find((t) => t.type === 'Charge' && t.state === 'Success');
     const captureId = transaction?.interactionId;
