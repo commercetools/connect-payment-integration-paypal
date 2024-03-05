@@ -9,14 +9,14 @@ export enum PaymentOutcome {
   REJECTED = 'Rejected',
 }
 
-export enum COCOTransactionStates {
+export enum TransactionStates {
   SUCCESS = 'Success',
   FAILURE = 'Failure',
   PENDING = 'Pending',
   INITIAL = 'Initial',
 }
 
-export enum COCOTransactionTypes {
+export enum TransactionTypes {
   AUTHORIZATION = 'Authorization',
   CANCEL_AUTHORIZATION = 'CancelAuthorization',
   CHARGE = 'Charge',

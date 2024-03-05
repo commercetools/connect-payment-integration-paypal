@@ -18,7 +18,7 @@ import { Address, Cart, Money, Payment } from '@commercetools/platform-sdk';
 import { CreateOrderRequest, PaypalShipping, parseAmount } from '../clients/types/paypal.client.type';
 import { PaymentModificationStatus } from '../dtos/operations/payment-intents.dto';
 import { randomUUID } from 'crypto';
-import { COCOTransactionStates, OrderConfirmation, PaymentOutcome } from './types/paypal-payment.type';
+import { TransactionStates, OrderConfirmation, PaymentOutcome } from './types/paypal-payment.type';
 import { getConfig } from '../config/config';
 import {
   CancelPaymentRequest,
@@ -179,7 +179,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
       transaction: {
         type: 'Charge',
         amount: ctPayment.amountPlanned,
-        state: COCOTransactionStates.INITIAL,
+        state: TransactionStates.INITIAL,
       },
     });
 
@@ -195,8 +195,8 @@ export class PaypalPaymentService extends AbstractPaymentService {
           interactionId: paypalResponse.pspReference,
           state:
             paypalResponse.outcome === PaymentModificationStatus.APPROVED
-              ? COCOTransactionStates.SUCCESS
-              : COCOTransactionStates.FAILURE,
+              ? TransactionStates.SUCCESS
+              : TransactionStates.FAILURE,
         },
       });
 
@@ -212,7 +212,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
         transaction: {
           type: 'Charge',
           amount: ctPayment.amountPlanned,
-          state: COCOTransactionStates.FAILURE,
+          state: TransactionStates.FAILURE,
         },
       });
 
@@ -267,11 +267,11 @@ export class PaypalPaymentService extends AbstractPaymentService {
   private convertPaymentResultCode(resultCode: PaymentOutcome): string {
     switch (resultCode) {
       case PaymentOutcome.AUTHORIZED:
-        return COCOTransactionStates.SUCCESS;
+        return TransactionStates.SUCCESS;
       case PaymentOutcome.REJECTED:
-        return COCOTransactionStates.FAILURE;
+        return TransactionStates.FAILURE;
       default:
-        return COCOTransactionStates.INITIAL;
+        return TransactionStates.INITIAL;
     }
   }
 

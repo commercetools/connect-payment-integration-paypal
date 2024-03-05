@@ -1,5 +1,5 @@
 import { ErrorGeneral, TransactionData, UpdatePayment } from '@commercetools/connect-payments-sdk';
-import { COCOTransactionStates, COCOTransactionTypes, NotificationEventType } from '../types/paypal-payment.type';
+import { TransactionStates, TransactionTypes, NotificationEventType } from '../types/paypal-payment.type';
 import { Money } from '@commercetools/platform-sdk';
 import { NotificationPayloadDTO, NotificationResourceDTO } from '../../dtos/paypal-payment.dto';
 
@@ -15,29 +15,29 @@ export class NotificationConverter {
     switch (item.event_type) {
       case NotificationEventType.PAYMENT_CAPTURE_COMPLETED:
         return {
-          type: COCOTransactionTypes.CHARGE,
-          state: COCOTransactionStates.SUCCESS,
+          type: TransactionTypes.CHARGE,
+          state: TransactionStates.SUCCESS,
           amount: this.convertAmount(item.resource),
           interactionId: item.resource.id,
         };
       case NotificationEventType.PAYMENT_CAPTURE_DECLINED:
         return {
-          type: COCOTransactionTypes.CHARGE,
-          state: COCOTransactionStates.FAILURE,
+          type: TransactionTypes.CHARGE,
+          state: TransactionStates.FAILURE,
           amount: this.convertAmount(item.resource),
           interactionId: item.resource.id,
         };
       case NotificationEventType.PAYMENT_CAPTURE_REFUNDED:
         return {
-          type: COCOTransactionTypes.REFUND,
-          state: COCOTransactionStates.SUCCESS,
+          type: TransactionTypes.REFUND,
+          state: TransactionStates.SUCCESS,
           amount: this.convertAmount(item.resource),
           interactionId: item.resource.id,
         };
       case NotificationEventType.PAYMENT_CAPTURE_REVERSED:
         return {
-          type: COCOTransactionTypes.CHARGE,
-          state: COCOTransactionStates.SUCCESS,
+          type: TransactionTypes.REFUND,
+          state: TransactionStates.SUCCESS,
           amount: this.convertAmount(item.resource),
           interactionId: item.resource.id,
         };
