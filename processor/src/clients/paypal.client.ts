@@ -6,10 +6,12 @@ import {
   AuthenticationResponse,
   CreateOrderRequest,
   IPaypalPaymentAPI,
+  NotificationVerificationRequest,
+  NotificationVerificationResponse,
   PaypalBasePath,
   PaypalUrls,
   parseAmount,
-} from '../services/types/paypal-api.type';
+} from './types/paypal.client.type';
 import { ErrorGeneral, Errorx } from '@commercetools/connect-payments-sdk';
 import { Money } from '@commercetools/platform-sdk';
 import { randomUUID } from 'crypto';
@@ -261,6 +263,58 @@ export class PaypalAPI implements IPaypalPaymentAPI {
         outcome: PaymentModificationStatus.APPROVED,
         pspReference: data.id,
       };
+    } catch (e) {
+      if (e instanceof PaypalApiError) {
+        throw e;
+      }
+
+      throw new ErrorGeneral(undefined, {
+        privateMessage: 'Failed due to network error or internal computations',
+        cause: e,
+      });
+    }
+  }
+
+  public async verifyNotification(payload: NotificationVerificationRequest): Promise<NotificationVerificationResponse> {
+    const url = this.buildResourceUrl(config.paypalEnvironment, PaypalUrls.NOTIFICATION_VERIFY);
+
+    const auth = await this.authenticateRequest();
+    const options = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'PayPal-Request-Id': randomUUID(), // required for idempotency BY PAYPAL
+        'PayPal-Partner-Attribution-Id': 'commercetools_Cart_Checkout',
+        Authorization: `Bearer ${auth.accessToken}`,
+      },
+      body: JSON.stringify(payload),
+    };
+
+    try {
+      const res = await fetch(url, options);
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({})); // Graceful handling if JSON parsing fails
+        const errorData = {
+          status: res.status,
+          name: error.name,
+          debug_id: error.debug_id,
+          message: error.message,
+        };
+
+        throw new PaypalApiError(errorData, {
+          fields: {
+            details: error.details,
+          },
+        });
+      }
+
+      const data = await res.json().catch(() => {
+        throw new ErrorGeneral(undefined, {
+          privateMessage: 'Failed to parse response JSON',
+        });
+      });
+
+      return data as NotificationVerificationResponse;
     } catch (e) {
       if (e instanceof PaypalApiError) {
         throw e;

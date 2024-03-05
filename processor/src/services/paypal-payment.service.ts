@@ -9,16 +9,16 @@ import {
   CreateOrderRequestDTO,
   CreateOrderResponseDTO,
   CaptureOrderResponseDTO,
-  PaymentOutcome,
+  NotificationPayloadDTO,
 } from '../dtos/paypal-payment.dto';
 
 import { getCartIdFromContext } from '../libs/fastify/context/context';
 import { PaypalAPI } from '../clients/paypal.client';
 import { Address, Cart, Money, Payment } from '@commercetools/platform-sdk';
-import { CreateOrderRequest, PaypalShipping, parseAmount } from './types/paypal-api.type';
+import { CreateOrderRequest, PaypalShipping, parseAmount } from '../clients/types/paypal.client.type';
 import { PaymentModificationStatus } from '../dtos/operations/payment-intents.dto';
 import { randomUUID } from 'crypto';
-import { OrderConfirmation } from './types/paypal-payment.type';
+import { TransactionStates, OrderConfirmation, PaymentOutcome } from './types/paypal-payment.type';
 import { getConfig } from '../config/config';
 import {
   CancelPaymentRequest,
@@ -31,6 +31,7 @@ import {
 import { paymentSDK } from '../payment-sdk';
 import { SupportedPaymentComponentsSchemaDTO } from '../dtos/operations/payment-componets.dto';
 import { AbstractPaymentService } from './abstract-payment.service';
+import { NotificationConverter } from './converters/notification.converter';
 const packageJSON = require('../../package.json');
 
 export type PaypalPaymentServiceOptions = {
@@ -40,10 +41,12 @@ export type PaypalPaymentServiceOptions = {
 
 export class PaypalPaymentService extends AbstractPaymentService {
   private paypalClient: PaypalAPI;
+  private notificationConverter: NotificationConverter;
 
   constructor(opts: PaypalPaymentServiceOptions) {
     super(opts.ctCartService, opts.ctPaymentService);
     this.paypalClient = new PaypalAPI();
+    this.notificationConverter = new NotificationConverter();
   }
 
   async config(): Promise<ConfigResponse> {
@@ -139,7 +142,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
     });
 
     // Make call to paypal to create payment intent
-    const paypalRequestData = this.convertCreatePaymentIntentRequest(ctCart, amountPlanned, data);
+    const paypalRequestData = this.convertCreatePaymentIntentRequest(ctCart, ctPayment, amountPlanned, data);
     const paypalResponse = await this.paypalClient.createOrder(paypalRequestData);
 
     const isAuthorized = paypalResponse.outcome === PaymentModificationStatus.APPROVED;
@@ -176,7 +179,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
       transaction: {
         type: 'Charge',
         amount: ctPayment.amountPlanned,
-        state: 'Initial',
+        state: TransactionStates.INITIAL,
       },
     });
 
@@ -190,7 +193,10 @@ export class PaypalPaymentService extends AbstractPaymentService {
           type: 'Charge',
           amount: ctPayment.amountPlanned,
           interactionId: paypalResponse.pspReference,
-          state: paypalResponse.outcome === PaymentModificationStatus.APPROVED ? 'Success' : 'Failure',
+          state:
+            paypalResponse.outcome === PaymentModificationStatus.APPROVED
+              ? TransactionStates.SUCCESS
+              : TransactionStates.FAILURE,
         },
       });
 
@@ -206,12 +212,17 @@ export class PaypalPaymentService extends AbstractPaymentService {
         transaction: {
           type: 'Charge',
           amount: ctPayment.amountPlanned,
-          state: 'Failure',
+          state: TransactionStates.FAILURE,
         },
       });
 
       throw e;
     }
+  }
+
+  public async processNotification(opts: { data: NotificationPayloadDTO }): Promise<void> {
+    const updateData = await this.notificationConverter.convert(opts.data);
+    await this.ctPaymentService.updatePayment(updateData);
   }
 
   async capturePayment(request: CapturePaymentRequest): Promise<PaymentProviderModificationResponse> {
@@ -256,16 +267,17 @@ export class PaypalPaymentService extends AbstractPaymentService {
   private convertPaymentResultCode(resultCode: PaymentOutcome): string {
     switch (resultCode) {
       case PaymentOutcome.AUTHORIZED:
-        return 'Success';
+        return TransactionStates.SUCCESS;
       case PaymentOutcome.REJECTED:
-        return 'Failure';
+        return TransactionStates.FAILURE;
       default:
-        return 'Initial';
+        return TransactionStates.INITIAL;
     }
   }
 
   private convertCreatePaymentIntentRequest(
     cart: Cart,
+    payment: Payment,
     amount: Money,
     payload: CreateOrderRequestDTO,
   ): CreateOrderRequest {
@@ -274,7 +286,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
       purchase_units: [
         {
           reference_id: 'ct-connect-paypal-' + randomUUID(),
-          invoice_id: cart.id,
+          invoice_id: payment.id,
           amount: {
             currency_code: amount.currencyCode,
             value: parseAmount(amount.centAmount),
