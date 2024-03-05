@@ -150,7 +150,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
     const ctPayment = await this.ctPaymentService.createPayment({
       amountPlanned,
       paymentMethodInfo: {
-        paymentInterface: getPaymentInterfaceFromContext() || 'mock',
+        paymentInterface: getPaymentInterfaceFromContext() || 'paypal',
       },
       ...(ctCart.customerId && {
         customer: {
