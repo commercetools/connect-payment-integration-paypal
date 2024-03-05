@@ -24,6 +24,7 @@ export class PaypalPaymentEnabler implements PaymentEnabler {
     // const configResponse = await fetch(instance.processorUrl + '/config', {
     //   method: 'GET',
     //   headers: { 'Content-Type': 'application/json', 'X-Session-Id': options.sessionId },
+    //   headers: { 'Content-Type': 'application/json' },
     // });
 
     // const configJson = await configResponse.json();
