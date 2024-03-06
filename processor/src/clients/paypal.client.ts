@@ -1,18 +1,20 @@
 import { config } from '../config/config';
-import { AmountSchemaDTO, PaymentModificationStatus } from '../dtos/operations/payment-intents.dto';
+import { AmountSchemaDTO } from '../dtos/operations/payment-intents.dto';
 import { PaypalApiError } from '../errors/paypal-api.error';
-import { PaymentProviderModificationResponse } from '../services/types/operation.type';
 import {
   AuthenticationResponse,
+  CaptureOrderResponse,
   CreateOrderRequest,
+  CreateOrderResponse,
   IPaypalPaymentAPI,
   NotificationVerificationRequest,
   NotificationVerificationResponse,
   PaypalBasePath,
   PaypalUrls,
+  RefundResponse,
   parseAmount,
 } from './types/paypal.client.type';
-import { ErrorGeneral, Errorx } from '@commercetools/connect-payments-sdk';
+import { ErrorGeneral } from '@commercetools/connect-payments-sdk';
 import { Money } from '@commercetools/platform-sdk';
 import { randomUUID } from 'crypto';
 
@@ -56,7 +58,7 @@ export class PaypalAPI implements IPaypalPaymentAPI {
     }
   }
 
-  public async createOrder(payload: CreateOrderRequest): Promise<PaymentProviderModificationResponse> {
+  public async createOrder(payload: CreateOrderRequest): Promise<CreateOrderResponse> {
     const url = this.buildResourceUrl(config.paypalEnvironment, PaypalUrls.ORDERS);
     const auth = await this.authenticateRequest();
     const options = {
@@ -94,10 +96,7 @@ export class PaypalAPI implements IPaypalPaymentAPI {
         });
       });
 
-      return {
-        outcome: PaymentModificationStatus.APPROVED,
-        pspReference: data.id,
-      };
+      return data as CreateOrderResponse;
     } catch (e) {
       if (e instanceof PaypalApiError) {
         throw e;
@@ -110,7 +109,7 @@ export class PaypalAPI implements IPaypalPaymentAPI {
     }
   }
 
-  public async captureOrder(resourceId: string | undefined): Promise<PaymentProviderModificationResponse> {
+  public async captureOrder(resourceId: string | undefined): Promise<CaptureOrderResponse> {
     const url = this.buildResourceUrl(config.paypalEnvironment, PaypalUrls.ORDERS_CAPTURE, resourceId);
     const auth = await this.authenticateRequest();
     const options = {
@@ -148,9 +147,9 @@ export class PaypalAPI implements IPaypalPaymentAPI {
         });
       });
 
-      return this.convertCaptureOrderResponse(data);
+      return data as CaptureOrderResponse;
     } catch (e) {
-      if (e instanceof Errorx) {
+      if (e instanceof PaypalApiError) {
         throw e;
       }
 
@@ -163,8 +162,8 @@ export class PaypalAPI implements IPaypalPaymentAPI {
 
   public async refundPartialPayment(
     paymentReference: string | undefined,
-    payload: AmountSchemaDTO,
-  ): Promise<PaymentProviderModificationResponse> {
+    payload: AmountSchemaDTO, // amount should be converted before sent, create a static method for converting amount in this class, to be used by any service needing it PAYPALAPI.convert_amount
+  ): Promise<RefundResponse> {
     const url = this.buildResourceUrl(config.paypalEnvironment, PaypalUrls.ORDERS_REFUND, paymentReference);
 
     const paypalAmount = this.convertToPaypalAmount(payload);
@@ -205,10 +204,7 @@ export class PaypalAPI implements IPaypalPaymentAPI {
         });
       });
 
-      return {
-        outcome: PaymentModificationStatus.APPROVED,
-        pspReference: data.id,
-      };
+      return data as RefundResponse;
     } catch (e) {
       if (e instanceof PaypalApiError) {
         throw e;
@@ -221,7 +217,7 @@ export class PaypalAPI implements IPaypalPaymentAPI {
     }
   }
 
-  public async refundFullPayment(paymentReference: string | undefined): Promise<PaymentProviderModificationResponse> {
+  public async refundFullPayment(paymentReference: string | undefined): Promise<RefundResponse> {
     const url = this.buildResourceUrl(config.paypalEnvironment, PaypalUrls.ORDERS_REFUND, paymentReference);
 
     const auth = await this.authenticateRequest();
@@ -259,10 +255,7 @@ export class PaypalAPI implements IPaypalPaymentAPI {
         });
       });
 
-      return {
-        outcome: PaymentModificationStatus.APPROVED,
-        pspReference: data.id,
-      };
+      return data as RefundResponse;
     } catch (e) {
       if (e instanceof PaypalApiError) {
         throw e;
@@ -323,44 +316,6 @@ export class PaypalAPI implements IPaypalPaymentAPI {
       throw new ErrorGeneral(undefined, {
         privateMessage: 'Failed due to network error or internal computations',
         cause: e,
-      });
-    }
-  }
-
-  private convertCaptureOrderResponse(data: any): PaymentProviderModificationResponse {
-    return {
-      outcome: this.convertCaptureOrderStatus(data),
-      pspReference: this.extractCaptureId(data),
-    };
-  }
-
-  private extractCaptureId(data: any): string {
-    if (
-      data.purchase_units &&
-      data.purchase_units.length > 0 &&
-      data.purchase_units[0]?.payments?.captures &&
-      data.purchase_units[0]?.payments?.captures.length > 0 &&
-      data.purchase_units[0]?.payments?.captures[0]?.id
-    ) {
-      return data.purchase_units[0].payments.captures[0].id;
-    } else {
-      throw new ErrorGeneral(undefined, {
-        privateMessage: 'not able to extract the capture ID',
-      });
-    }
-  }
-
-  private convertCaptureOrderStatus(data: any): PaymentModificationStatus {
-    if (data?.status) {
-      const result = data.status as string;
-      if (result.toUpperCase() === 'COMPLETED') {
-        return PaymentModificationStatus.APPROVED;
-      } else {
-        return PaymentModificationStatus.REJECTED;
-      }
-    } else {
-      throw new ErrorGeneral(undefined, {
-        privateMessage: 'capture status not received.',
       });
     }
   }

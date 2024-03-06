@@ -9,7 +9,13 @@ import {
 import { getCartIdFromContext, getPaymentInterfaceFromContext } from '../libs/fastify/context/context';
 import { PaypalAPI } from '../clients/paypal.client';
 import { Address, Cart, Money, Payment } from '@commercetools/platform-sdk';
-import { CreateOrderRequest, PaypalShipping, parseAmount } from '../clients/types/paypal.client.type';
+import {
+  CaptureOrderResponse,
+  CreateOrderRequest,
+  OrderStatus,
+  PaypalShipping,
+  parseAmount,
+} from '../clients/types/paypal.client.type';
 import { PaymentModificationStatus } from '../dtos/operations/payment-intents.dto';
 import { randomUUID } from 'crypto';
 import {
@@ -17,6 +23,7 @@ import {
   OrderConfirmation,
   PaymentOutcome,
   PaypalPaymentServiceOptions,
+  TransactionTypes,
 } from './types/paypal-payment.type';
 import { getConfig } from '../config/config';
 import {
@@ -172,24 +179,24 @@ export class PaypalPaymentService extends AbstractPaymentService {
     const paypalRequestData = this.convertCreatePaymentIntentRequest(ctCart, ctPayment, amountPlanned, data);
     const paypalResponse = await this.paypalClient.createOrder(paypalRequestData);
 
-    const isAuthorized = paypalResponse.outcome === PaymentModificationStatus.APPROVED;
+    const isAuthorized = paypalResponse.status === OrderStatus.PAYER_ACTION_REQUIRED;
 
     const resultCode = isAuthorized ? PaymentOutcome.AUTHORIZED : PaymentOutcome.REJECTED;
 
     const updatedPayment = await this.ctPaymentService.updatePayment({
       id: ctPayment.id,
-      pspReference: paypalResponse.pspReference,
+      pspReference: paypalResponse.id,
       paymentMethod: 'paypal',
       transaction: {
         type: 'Authorization',
         amount: ctPayment.amountPlanned,
-        interactionId: paypalResponse.pspReference,
+        interactionId: paypalResponse.id,
         state: this.convertPaymentResultCode(resultCode as PaymentOutcome),
       },
     });
 
     return {
-      id: paypalResponse.pspReference,
+      id: paypalResponse.id,
       paymentReference: updatedPayment.id,
     };
   }
@@ -204,7 +211,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
     let updatedPayment = await this.ctPaymentService.updatePayment({
       id: ctPayment.id,
       transaction: {
-        type: 'Charge',
+        type: TransactionTypes.CHARGE,
         amount: ctPayment.amountPlanned,
         state: TransactionStates.INITIAL,
       },
@@ -213,31 +220,27 @@ export class PaypalPaymentService extends AbstractPaymentService {
     try {
       // Make call to paypal to capture payment intent
       const paypalResponse = await this.paypalClient.captureOrder(opts.data.orderId);
+      const convertedResponse = this.convertCaptureOrderResponse(paypalResponse, updatedPayment.id);
 
       updatedPayment = await this.ctPaymentService.updatePayment({
-        id: ctPayment.id,
+        id: updatedPayment.id,
         transaction: {
-          type: 'Charge',
-          amount: ctPayment.amountPlanned,
-          interactionId: paypalResponse.pspReference,
+          type: TransactionTypes.CHARGE,
+          amount: updatedPayment.amountPlanned,
+          interactionId: convertedResponse.id,
           state:
-            paypalResponse.outcome === PaymentModificationStatus.APPROVED
-              ? TransactionStates.SUCCESS
-              : TransactionStates.FAILURE,
+            paypalResponse.status === OrderStatus.COMPLETED ? TransactionStates.SUCCESS : TransactionStates.FAILURE,
         },
       });
 
-      return {
-        id: paypalResponse.pspReference,
-        paymentReference: updatedPayment.id,
-      };
+      return convertedResponse;
     } catch (e) {
       // TODO: create a new method in payment sdk for changing transaction state. To be used in scenarios, where we expect the txn state to change,
       // from initial, to success to failure https://docs.commercetools.com/api/projects/payments#change-transactionstate
       await this.ctPaymentService.updatePayment({
         id: ctPayment.id,
         transaction: {
-          type: 'Charge',
+          type: TransactionTypes.CHARGE,
           amount: ctPayment.amountPlanned,
           state: TransactionStates.FAILURE,
         },
@@ -262,7 +265,14 @@ export class PaypalPaymentService extends AbstractPaymentService {
    * @returns Promise with mocking data containing operation status and PSP reference
    */
   async capturePayment(request: CapturePaymentRequest): Promise<PaymentProviderModificationResponse> {
-    return await this.paypalClient.captureOrder(request.payment.interfaceId);
+    const data = await this.paypalClient.captureOrder(request.payment.interfaceId);
+    const response = this.convertCaptureOrderResponse(data, request.payment.id);
+
+    return {
+      outcome:
+        data.status === OrderStatus.COMPLETED ? PaymentModificationStatus.APPROVED : PaymentModificationStatus.REJECTED,
+      pspReference: response.id,
+    };
   }
 
   /**
@@ -293,13 +303,27 @@ export class PaypalPaymentService extends AbstractPaymentService {
    * @returns Promise with mocking data containing operation status and PSP reference
    */
   async refundPayment(request: RefundPaymentRequest): Promise<PaymentProviderModificationResponse> {
-    const transaction = request.payment.transactions.find((t) => t.type === 'Charge' && t.state === 'Success');
+    const transaction = request.payment.transactions.find(
+      (t) => t.type === TransactionTypes.CHARGE && t.state === TransactionStates.SUCCESS,
+    );
     const captureId = transaction?.interactionId;
     if (this.isPartialRefund(request)) {
-      return this.paypalClient.refundPartialPayment(captureId, request.amount);
+      const data = await this.paypalClient.refundPartialPayment(captureId, request.amount);
+      return {
+        outcome:
+          data.status === OrderStatus.COMPLETED
+            ? PaymentModificationStatus.APPROVED
+            : PaymentModificationStatus.REJECTED,
+        pspReference: data.id,
+      };
     }
 
-    return this.paypalClient.refundFullPayment(captureId);
+    const data = await this.paypalClient.refundFullPayment(captureId);
+    return {
+      outcome:
+        data.status === OrderStatus.COMPLETED ? PaymentModificationStatus.APPROVED : PaymentModificationStatus.REJECTED,
+      pspReference: data.id,
+    };
   }
 
   private isPartialRefund(request: RefundPaymentRequest): boolean {
@@ -403,4 +427,44 @@ export class PaypalPaymentService extends AbstractPaymentService {
 
     return addressLine;
   }
+
+  private convertCaptureOrderResponse(data: CaptureOrderResponse, paymentId: string): CaptureOrderResponseDTO {
+    const capture = this.extractCaptureIdAndStatus(data);
+    return {
+      captureStatus: capture.status,
+      id: capture.id,
+      paymentReference: paymentId,
+    };
+  }
+
+  private extractCaptureIdAndStatus(data: CaptureOrderResponse): any {
+    if (
+      data.purchase_units &&
+      data.purchase_units.length > 0 &&
+      data.purchase_units[0]?.payments?.captures &&
+      data.purchase_units[0]?.payments?.captures.length > 0 &&
+      data.purchase_units[0]?.payments?.captures[0]
+    ) {
+      return data.purchase_units[0].payments.captures[0];
+    } else {
+      throw new ErrorGeneral(undefined, {
+        privateMessage: 'not able to extract the capture ID/Status',
+      });
+    }
+  }
+
+  // private convertCaptureOrderStatus(data: any): PaymentModificationStatus {
+  //   if (data?.status) {
+  //     const result = data.status as string;
+  //     if (result.toUpperCase() === 'COMPLETED') {
+  //       return PaymentModificationStatus.APPROVED;
+  //     } else {
+  //       return PaymentModificationStatus.REJECTED;
+  //     }
+  //   } else {
+  //     throw new ErrorGeneral(undefined, {
+  //       privateMessage: 'capture status not received.',
+  //     });
+  //   }
+  // }
 }
