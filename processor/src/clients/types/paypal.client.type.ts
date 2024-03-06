@@ -21,6 +21,11 @@ export enum VerificationStatus {
   FAILURE = 'FAILURE',
 }
 
+export enum OrderStatus {
+  PAYER_ACTION_REQUIRED = 'PAYER_ACTION_REQUIRED',
+  COMPLETED = 'COMPLETED',
+}
+
 export type AuthenticationResponse = {
   status: number;
   accessToken: string;
@@ -66,14 +71,21 @@ export type PaypalItem = {
   description?: string;
   sku?: string;
   category?: string;
-  unit_amount: {
-    currency_code: string;
-    value: string;
-  };
+  unit_amount: Amount;
   tax?: {
     currency_code: string;
     value: string;
   };
+};
+
+export type Capture = {
+  status: string;
+  id: string;
+  amount: Amount;
+};
+
+export type Payment = {
+  captures: Capture[];
 };
 
 type PurchaseUnits = {
@@ -82,6 +94,7 @@ type PurchaseUnits = {
   invoice_id: string;
   items?: PaypalItem[];
   shipping: PaypalShipping;
+  payments?: Payment;
 };
 
 export type CreateOrderRequest = {
@@ -107,6 +120,23 @@ export type NotificationVerificationRequest = {
   transmission_time: string;
   webhook_id: string;
   webhook_event: Record<string, any>;
+};
+
+export type CaptureOrderResponse = {
+  id: string; // order ID
+  purchase_units: PurchaseUnits[];
+  status: string;
+};
+
+export type CreateOrderResponse = {
+  id: string;
+  status: string;
+};
+
+export type RefundResponse = {
+  id: string;
+  status: string;
+  amount: Amount;
 };
 
 export type NotificationVerificationResponse = {

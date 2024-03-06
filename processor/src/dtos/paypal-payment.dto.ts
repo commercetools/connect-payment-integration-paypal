@@ -48,6 +48,7 @@ export const CaptureOrderRequest = Type.Object({
 export const CaptureOrderResponse = Type.Object({
   id: Type.String(),
   paymentReference: Type.String(),
+  captureStatus: Type.String(),
 });
 
 export const CaptureOrderParams = Type.Object({

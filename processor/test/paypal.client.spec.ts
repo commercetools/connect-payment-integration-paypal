@@ -10,9 +10,8 @@ import {
 import { paypalCreateOrderRequest } from './utils/mock-paypal-request-data';
 import { setupServer } from 'msw/node';
 import { PaypalAPI } from '../src/clients/paypal.client';
-import { PaymentModificationStatus } from '../src/dtos/operations/payment-intents.dto';
 import { mockPaypalRequest } from './utils/paypal-request.mock';
-import { PaypalBasePath, PaypalUrls } from '../src/clients/types/paypal.client.type';
+import { OrderStatus, PaypalBasePath, PaypalUrls } from '../src/clients/types/paypal.client.type';
 
 describe('Paypal API', () => {
   const api = new PaypalAPI();
@@ -84,8 +83,8 @@ describe('Paypal API', () => {
       const result = await api.createOrder(paypalCreateOrderRequest);
 
       // then
-      expect(result?.outcome).toBe(PaymentModificationStatus.APPROVED);
-      expect(result?.pspReference).toBe(paypalCreateOrderOkResponse.id);
+      expect(result?.status).toBe(OrderStatus.PAYER_ACTION_REQUIRED);
+      expect(result?.id).toBe(paypalCreateOrderOkResponse.id);
     });
   });
   describe('Capture PayPal Order', () => {
@@ -102,8 +101,8 @@ describe('Paypal API', () => {
       const result = await api.captureOrder(orderId);
 
       // then
-      expect(result.outcome).toBe(PaymentModificationStatus.APPROVED);
-      expect(result.pspReference).toBe(paypalCaptureOrderOkResponse.purchase_units[0].payments.captures[0].id);
+      expect(result.status).toBe(OrderStatus.COMPLETED);
+      expect(result.id).toBe(paypalCaptureOrderOkResponse.id);
     });
 
     it('should return an error when PayPal return a not found order', async () => {
@@ -141,8 +140,8 @@ describe('Paypal API', () => {
       });
 
       // then
-      expect(result.outcome).toBe(PaymentModificationStatus.APPROVED);
-      expect(result.pspReference).toBe(paypalRefundOkResponse.id);
+      expect(result.status).toBe(OrderStatus.COMPLETED);
+      expect(result.id).toBe(paypalRefundOkResponse.id);
     });
 
     it('should perform a full refund on the captured order', async () => {
@@ -157,8 +156,8 @@ describe('Paypal API', () => {
       const result = await api.refundFullPayment(captureId);
 
       // then
-      expect(result.outcome).toBe(PaymentModificationStatus.APPROVED);
-      expect(result.pspReference).toBe(paypalRefundOkResponse.id);
+      expect(result.status).toBe(OrderStatus.COMPLETED);
+      expect(result.id).toBe(paypalRefundOkResponse.id);
     });
 
     it('should return an error when PayPal return a not found error', async () => {
