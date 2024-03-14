@@ -37,6 +37,10 @@ deployAs:
         - key: PAYPAL_ENVIRONMENT
           description: Payment environment (live/test)
           required: true
+        - key: CTP_JWKS_URL
+          description: JWKs url
+        - key: CTP_JWT_ISSUER
+          description: JWT Issuer for jwt validation
       securedConfiguration:
         - key: CTP_CLIENT_SECRET
           description: Commercetools client secret
