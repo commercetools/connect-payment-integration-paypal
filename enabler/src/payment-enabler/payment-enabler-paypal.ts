@@ -53,5 +53,4 @@ export class PaypalPaymentEnabler implements PaymentEnabler {
     }
     return new supportedMethods[type](baseOptions, componentOptions);
   }
-
 }
