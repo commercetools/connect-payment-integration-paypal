@@ -7,6 +7,7 @@ export default defineConfig({
     cssInjectedByJsPlugin(),
   ],
   build: {
+    outDir: resolve(__dirname, 'public'),
     lib: {
       // Could also be a dictionary or array of multiple entry points
       entry: resolve(__dirname, 'src/main.ts'),

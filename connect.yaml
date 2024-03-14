@@ -22,6 +22,12 @@ deployAs:
         - key: CTP_SESSION_URL
           description: Session API URL
           required: true
+        - key: CTP_JWKS_URL
+          description: JWKs url
+          required: true
+        - key: CTP_JWT_ISSUER
+          description: JWT Issuer for jwt validation
+          required: true
         - key: PAYPAL_CLIENT_ID
           description: Paypal client ID
           required: true
