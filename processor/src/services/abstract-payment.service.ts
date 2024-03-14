@@ -103,7 +103,7 @@ export abstract class AbstractPaymentService {
    * @param opts - input for payment modification including payment ID, action and payment amount
    * @returns Promise with outcome of payment modification after invocation to PSPs
    */
-  
+
   abstract refundPayment(request: RefundPaymentRequest): Promise<PaymentProviderModificationResponse>;
 
   /**
