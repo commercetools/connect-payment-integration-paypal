@@ -73,10 +73,10 @@ export class PaypalComponent extends DefaultPaypalComponent {
 
           if (!response.ok) {
             const error = await response.json().catch(() => ({})); // Graceful handling if JSON parsing fails
-
+            const debugId =  error?.errors?.[0]?.debug_id
             const errorDetail = error?.errors?.[0]?.details?.[0];
             const errorMessage = errorDetail
-              ? `${errorDetail?.issue} ${errorDetail?.description} (${error?.debug_id})`
+              ? `${errorDetail?.issue} ${errorDetail?.description} (${debugId})`
               : JSON.stringify(error);
 
             throw new Error(errorMessage);
@@ -109,8 +109,9 @@ export class PaypalComponent extends DefaultPaypalComponent {
             const error = await response.json().catch(() => ({})); // Graceful handling if JSON parsing fails
 
             const errorDetail = error?.errors?.[0]?.details?.[0];
+            const debugId =  error?.errors?.[0]?.debug_id
             const errorMessage = errorDetail
-              ? `${errorDetail?.issue} ${errorDetail?.description} (${error?.debug_id})`
+              ? `${errorDetail?.issue} ${errorDetail?.description} (${debugId})`
               : JSON.stringify(error);
 
             if (errorDetail?.issue === "INSTRUMENT_DECLINED" && actions) {
