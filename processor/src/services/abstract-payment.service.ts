@@ -167,7 +167,6 @@ export abstract class AbstractPaymentService {
       case 'refundPayment': {
         return 'Refund';
       }
-      // TODO: Handle Error case
       default: {
         throw new ErrorInvalidJsonInput(`Request body does not contain valid JSON.`);
       }

@@ -114,8 +114,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
               name: 'Paypal Payment API',
               status: 'DOWN',
               details: {
-                // TODO do not expose the error
-                error: (e as Error)?.message,
+                error: e,
               },
             };
           }
@@ -256,8 +255,6 @@ export class PaypalPaymentService extends AbstractPaymentService {
 
       return convertedResponse;
     } catch (e) {
-      // TODO: create a new method in payment sdk for changing transaction state. To be used in scenarios, where we expect the txn state to change,
-      // from initial, to success to failure https://docs.commercetools.com/api/projects/payments#change-transactionstate
       await this.ctPaymentService.updatePayment({
         id: ctPayment.id,
         transaction: {
