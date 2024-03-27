@@ -24,6 +24,7 @@ export class PaypalPaymentEnabler implements PaymentEnabler {
       }
     );
 
+    // TODO: handle not 2xx response
     const configJson = await configResponse.json();
 
     const paypalCheckout = await loadScript({
@@ -37,7 +38,7 @@ export class PaypalPaymentEnabler implements PaymentEnabler {
         "sofort",
         "sepa",
       ],
-      ...(options.currency ? { currency: options.currency } : {}),
+      currency: configJson.currency
     });
 
     return {

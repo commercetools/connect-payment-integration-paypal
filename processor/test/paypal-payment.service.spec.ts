@@ -3,6 +3,7 @@ import { ConfigResponse, ModifyPayment } from '../src/services/types/operation.t
 
 import { paymentSDK } from '../src/payment-sdk';
 import { DefaultPaymentService } from '@commercetools/connect-payments-sdk/dist/commercetools/services/ct-payment.service';
+import { DefaultCartService } from '@commercetools/connect-payments-sdk/dist/commercetools/services/ct-cart.service';
 import { mockGetPaymentResult, mockUpdatePaymentResult } from './utils/mock-payment-data';
 import * as Config from '../src/config/config';
 import { PaypalPaymentServiceOptions } from '../src/services/types/paypal-payment.type';
@@ -12,6 +13,7 @@ import { setupServer } from 'msw/node';
 import { PaypalUrls, PaypalBasePath } from '../src/clients/types/paypal.client.type';
 import { paypalAuthenticationResponse, paypalCaptureOrderOkResponse } from './utils/mock-paypal-response-data';
 import { mockPaypalRequest } from './utils/paypal-request.mock';
+import { mockGetCartResult } from './utils/mock-cart-data';
 
 interface FlexibleConfig {
   [key: string]: string | number | undefined; // Adjust the type according to your config values
@@ -24,6 +26,7 @@ function setupMockConfig(keysAndValues: Record<string, string>) {
   });
 
   jest.spyOn(Config, 'getConfig').mockReturnValue(mockConfig as any);
+  jest.spyOn(DefaultCartService.prototype, 'getCart').mockResolvedValue(mockGetCartResult);
 }
 
 describe('paypal-payment.service', () => {
@@ -58,7 +61,6 @@ describe('paypal-payment.service', () => {
     // Setup mock config for a system using `clientKey`
     setupMockConfig({ paypalClientId: '', paypalEnvironment: 'test' });
 
-    // const opService: OperationService = new DefaultOperationService(opts);
     const result: ConfigResponse = await paymentService.config();
 
     // Assertions can remain the same or be adapted based on the abstracted access

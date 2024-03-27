@@ -10,7 +10,7 @@ import {
 } from "../../base";
 
 export class PaypalBuilder extends PaypalBaseComponentBuilder {
-  public componentHasSubmit = true;
+  public componentHasSubmit = false;
 
   constructor(baseOptions: BaseOptions) {
     super(PaymentMethod.paypal, baseOptions);
@@ -38,6 +38,15 @@ export class PaypalComponent extends DefaultPaypalComponent {
 
   init() {
     this.component = this.baseOptions.sdk.Buttons({
+      onClick: async (_, actions) => {
+        if (!this.componentOptions.onClick()) {
+          return actions.reject()
+        } 
+        return actions.resolve()
+      },
+      onError: (err) => {
+        this.baseOptions.onError(err);
+      },
       createOrder: async (): Promise<string> => {
         try {
           const response = await fetch(
@@ -48,7 +57,17 @@ export class PaypalComponent extends DefaultPaypalComponent {
                 "Content-Type": "application/json",
                 "X-Session-Id": this.baseOptions.sessionId,
               },
-              body: JSON.stringify(this.componentOptions.paymentDraft),
+              body: JSON.stringify({
+                intent: "CAPTURE",
+                payment_source: {
+                  paypal: {
+                    experience_context: {
+                      payment_method_preference: "IMMEDIATE_PAYMENT_REQUIRED",
+                      user_action: "PAY_NOW",
+                    },
+                  },
+                },
+              }),
             }
           );
           const data = await response.json();
@@ -91,7 +110,7 @@ export class PaypalComponent extends DefaultPaypalComponent {
           } else {
             this.baseOptions.onComplete({
               paymentReference: orderData?.paymentReference,
-              isSuccess: orderData?.captureStatus === 'COMPLETED'
+              isSuccess: orderData?.captureStatus === "COMPLETED",
             });
           }
         } catch (err) {

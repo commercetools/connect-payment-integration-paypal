@@ -65,16 +65,8 @@
               });
               const builder = await enabler.createComponentBuilder('paypal');
               const component = await builder.build({
-                paymentDraft: {
-                  intent: 'CAPTURE',
-                    payment_source: {
-                      paypal: {
-                        experience_context: {
-                          payment_method_preference: 'IMMEDIATE_PAYMENT_REQUIRED',
-                          user_action: 'PAY_NOW'
-                        }
-                      }
-                    }
+                onClick: () => { // to be used for validation
+                  return false // change to true, to test payment flow
                 }
               })
               component.mount('#card-component')

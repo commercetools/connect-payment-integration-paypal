@@ -4,7 +4,6 @@ import {
   PaymentComponent,
   PaymentComponentBuilder,
   PaymentMethod,
-  PaymentPayload,
   PaymentResult,
 } from "../payment-enabler/payment-enabler";
 
@@ -26,10 +25,9 @@ export type BaseOptions = {
 export abstract class PaypalBaseComponentBuilder
   implements PaymentComponentBuilder
 {
-  public componentHasSubmit = true;
+  public componentHasSubmit = false;
 
   protected paymentMethod: PaymentMethod;
-  protected paymentDraft: PaymentPayload;
   protected baseOptions: BaseOptions;
 
   constructor(paymentMethod: PaymentMethod, baseOptions: BaseOptions) {
@@ -62,6 +60,7 @@ export class DefaultPaypalComponent implements PaymentComponent {
     this.paymentMethod = paymentMethod;
     this.baseOptions = baseOptions;
     this.componentOptions = componentOptions;
+    this.componentOptions.showPayButton = true;
   }
 
   init() {
@@ -73,7 +72,6 @@ export class DefaultPaypalComponent implements PaymentComponent {
   }
 
   mount(selector: string): void {
-    console.log(this.component.isEligible);
     this.component.render(selector);
   }
 }
