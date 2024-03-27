@@ -191,9 +191,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
     const paypalRequestData = this.convertCreatePaymentIntentRequest(ctCart, ctPayment, amountPlanned, data);
     const paypalResponse = await this.paypalClient.createOrder(paypalRequestData);
 
-    const isAuthorized = paypalResponse.status === OrderStatus.PAYER_ACTION_REQUIRED;
-
-    const resultCode = isAuthorized ? PaymentOutcome.AUTHORIZED : PaymentOutcome.REJECTED;
+    const isAuthorizationPending = paypalResponse.status === OrderStatus.PAYER_ACTION_REQUIRED;
 
     const updatedPayment = await this.ctPaymentService.updatePayment({
       id: ctPayment.id,
@@ -203,7 +201,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
         type: 'Authorization',
         amount: ctPayment.amountPlanned,
         interactionId: paypalResponse.id,
-        state: this.convertPaymentResultCode(resultCode as PaymentOutcome),
+        state: isAuthorizationPending ? TransactionStates.INITIAL : TransactionStates.FAILURE,
       },
     });
 
@@ -220,6 +218,16 @@ export class PaypalPaymentService extends AbstractPaymentService {
     });
 
     this.validateInterfaceIdMismatch(ctPayment, opts.data.orderId);
+
+    await this.ctPaymentService.updatePayment({
+      id: ctPayment.id,
+      transaction: {
+        type: TransactionTypes.AUTHORIZATION,
+        amount: ctPayment.amountPlanned,
+        interactionId: order.id,
+        state: TransactionStates.SUCCESS,
+      },
+    });
 
     let updatedPayment = await this.ctPaymentService.updatePayment({
       id: ctPayment.id,
