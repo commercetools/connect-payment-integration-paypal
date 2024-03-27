@@ -19,9 +19,6 @@ export const config = {
   paypalEnvironment: process.env.PAYPAL_ENVIRONMENT || 'test',
   paypalWebhookId: process.env.PAYPAL_WEBHOOK_ID || '',
 
-  // Payment Providers config
-  returnUrl: process.env.RETURN_URL,
-
   // TODO review these configurations
   // supportedUIElements: convertStringCommaSeparatedValuesToArray(process.env.SUPPORTED_UI_ELEMENTS),
   // enableStoreDetails: process.env.ENABLE_STORE_DETAILS === 'true' ? true : false,
