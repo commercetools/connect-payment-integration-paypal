@@ -38,11 +38,14 @@ export class PaypalAPI implements IPaypalPaymentAPI {
         const errorData = {
           status: res.status,
           name: error.name,
-          debug_id: error.debug_id,
           message: error.message,
         };
 
-        throw new PaypalApiError(errorData);
+        throw new PaypalApiError(errorData, {
+          fields: {
+            debug_id: error.debug_id || res.headers.get('paypal-debug-id'),
+          },
+        });
       }
 
       return res;
@@ -78,13 +81,13 @@ export class PaypalAPI implements IPaypalPaymentAPI {
         const errorData = {
           status: res.status,
           name: error.name,
-          debug_id: error.debug_id,
           message: error.message,
         };
 
         throw new PaypalApiError(errorData, {
           fields: {
             details: error.details,
+            debug_id: error.debug_id || res.headers.get('paypal-debug-id'),
           },
         });
       }
@@ -129,13 +132,13 @@ export class PaypalAPI implements IPaypalPaymentAPI {
         const errorData = {
           status: res.status,
           name: error.name,
-          debug_id: error.debug_id,
           message: error.message,
         };
 
         throw new PaypalApiError(errorData, {
           fields: {
             details: error.details,
+            debug_id: error.debug_id || res.headers.get('paypal-debug-id'),
           },
         });
       }
@@ -180,13 +183,13 @@ export class PaypalAPI implements IPaypalPaymentAPI {
         const errorData = {
           status: res.status,
           name: error.name,
-          debug_id: error.debug_id,
           message: error.message,
         };
 
         throw new PaypalApiError(errorData, {
           fields: {
             details: error.details,
+            debug_id: error.debug_id || res.headers.get('paypal-debug-id'),
           },
         });
       }
@@ -237,13 +240,13 @@ export class PaypalAPI implements IPaypalPaymentAPI {
         const errorData = {
           status: res.status,
           name: error.name,
-          debug_id: error.debug_id,
           message: error.message,
         };
 
         throw new PaypalApiError(errorData, {
           fields: {
             details: error.details,
+            debug_id: error.debug_id || res.headers.get('paypal-debug-id'),
           },
         });
       }
@@ -288,13 +291,13 @@ export class PaypalAPI implements IPaypalPaymentAPI {
         const errorData = {
           status: res.status,
           name: error.name,
-          debug_id: error.debug_id,
           message: error.message,
         };
 
         throw new PaypalApiError(errorData, {
           fields: {
             details: error.details,
+            debug_id: error.debug_id || res.headers.get('paypal-debug-id'),
           },
         });
       }
@@ -340,13 +343,13 @@ export class PaypalAPI implements IPaypalPaymentAPI {
         const errorData = {
           status: res.status,
           name: error.name,
-          debug_id: error.debug_id,
           message: error.message,
         };
 
         throw new PaypalApiError(errorData, {
           fields: {
             details: error.details,
+            debug_id: error.debug_id || res.headers.get('paypal-debug-id'),
           },
         });
       }
@@ -403,11 +406,14 @@ export class PaypalAPI implements IPaypalPaymentAPI {
         const errorData = {
           status: res.status,
           name: error.error,
-          debug_id: res.headers.get('paypal-debug-id'),
           message: error.error_description,
         };
 
-        throw new PaypalApiError(errorData);
+        throw new PaypalApiError(errorData, {
+          fields: {
+            debug_id: res.headers.get('paypal-debug-id'),
+          },
+        });
       }
 
       const { access_token: accessToken } = await res.json().catch(() => {
