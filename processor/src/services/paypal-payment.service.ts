@@ -90,7 +90,14 @@ export class PaypalPaymentService extends AbstractPaymentService {
       timeout: getConfig().healthCheckTimeout,
       checks: [
         healthCheckCommercetoolsPermissions({
-          requiredPermissions: ['manage_project', 'manage_checkout_payment_intents'],
+          requiredPermissions: [
+            'manage_payments',
+            'view_sessions',
+            'view_api_clients',
+            'manage_orders',
+            'introspect_oauth_tokens',
+            'manage_checkout_payment_intents',
+          ],
           ctAuthorizationService: paymentSDK.ctAuthorizationService,
           projectKey: getConfig().projectKey,
         }),
