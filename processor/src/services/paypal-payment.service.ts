@@ -197,9 +197,15 @@ export class PaypalPaymentService extends AbstractPaymentService {
     const paypalRequestData = this.convertCreatePaymentIntentRequest(ctCart, ctPayment, amountPlanned, data);
     const paypalResponse = await this.paypalClient.createOrder(paypalRequestData);
 
+    const updatedPayment = await this.ctPaymentService.updatePayment({
+      id: payment.id,
+      pspReference: paypalResponse.id,
+      paymentMethod: 'paypal',
+    });
+
     return {
       id: paypalResponse.id,
-      paymentReference: payment.id,
+      paymentReference: updatedPayment.id,
     };
   }
 
