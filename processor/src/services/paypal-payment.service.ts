@@ -185,7 +185,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
       }),
     });
 
-    const payment = await this.ctCartService.addPayment({
+    await this.ctCartService.addPayment({
       resource: {
         id: ctCart.id,
         version: ctCart.version,
@@ -198,7 +198,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
     const paypalResponse = await this.paypalClient.createOrder(paypalRequestData);
 
     const updatedPayment = await this.ctPaymentService.updatePayment({
-      id: payment.id,
+      id: ctPayment.id,
       pspReference: paypalResponse.id,
       paymentMethod: 'paypal',
     });
