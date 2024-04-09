@@ -38,6 +38,10 @@ export class PaypalComponent extends DefaultPaypalComponent {
 
   init() {
     this.component = this.baseOptions.sdk.Buttons({
+      style: {
+        height: 40,
+        label: "buynow",
+      },
       onClick: async (_, actions) => {
         if (!this.componentOptions.onClick()) {
           return actions.reject();
