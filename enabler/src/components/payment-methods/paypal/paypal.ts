@@ -48,6 +48,9 @@ export class PaypalComponent extends DefaultPaypalComponent {
         }
         return actions.resolve();
       },
+      onCancel: () => {
+        this.baseOptions.onError("Payment cancelled by user");
+      },
       onError: (err) => {
         this.baseOptions.onError(err);
       },
