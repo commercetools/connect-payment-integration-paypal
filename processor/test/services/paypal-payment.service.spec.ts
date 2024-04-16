@@ -93,6 +93,7 @@ describe('paypal-payment.service', () => {
       return result;
     };
 
+    setupMockConfig({ paypalClientId: '', paypalEnvironment: 'test', healthCheckTimeout: '4444' });
     jest.spyOn(StatusHandler, 'healthCheckCommercetoolsPermissions').mockReturnValue(mockHealthCheckFunction);
     mockServer.use(
       mockPaypalRequest(PaypalBasePath.TEST, `${PaypalUrls.AUTHENTICATION}`, 200, paypalAuthenticationResponse),
