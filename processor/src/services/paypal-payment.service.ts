@@ -32,7 +32,7 @@ import {
   PaypalPaymentServiceOptions,
   TransactionTypes,
 } from './types/paypal-payment.type';
-import { getConfig } from '../config/config';
+import { config, getConfig } from '../config/config';
 import {
   CancelPaymentRequest,
   CapturePaymentRequest,
@@ -87,7 +87,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
    */
   async status(): Promise<StatusResponse> {
     const handler = await statusHandler({
-      timeout: getConfig().healthCheckTimeout,
+      timeout: config.healthCheckTimeout,
       checks: [
         healthCheckCommercetoolsPermissions({
           requiredPermissions: [
@@ -99,7 +99,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
             'manage_checkout_payment_intents',
           ],
           ctAuthorizationService: paymentSDK.ctAuthorizationService,
-          projectKey: getConfig().projectKey,
+          projectKey: config.projectKey,
         }),
         async () => {
           try {

@@ -1,5 +1,24 @@
 import { http, HttpHandler, HttpResponse } from 'msw';
 
+export const mockPaypalGetRequest = (basePath: string, uri: string, respCode: number, data?: any): HttpHandler => {
+  return http.get(`${basePath}${uri}`, () => {
+    if (respCode >= 299) {
+      const errorData = {
+        name: 'SOME_ERROR_NAME',
+        message: 'an error occurred in paypal',
+        debug_id: '12345678',
+      };
+      return new Response(objectToReadableStream(errorData), {
+        headers: {
+          'paypal-debug-id': '12345678',
+        },
+        status: respCode,
+      });
+    }
+    return HttpResponse.json(data);
+  });
+};
+
 export const mockPaypalRequest = (
   basePath: string,
   uri: string,

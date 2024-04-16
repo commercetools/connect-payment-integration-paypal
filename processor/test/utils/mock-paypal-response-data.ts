@@ -238,3 +238,96 @@ export const paypalNotFoundResponse = {
     },
   ],
 };
+
+export const paypalErrorResponse = {
+  status: 299,
+  statusText: 'Unprocessable Entity',
+  headers: {
+    connection: 'close',
+    'content-length': '77',
+    'content-type': 'application/json',
+    server: 'nginx',
+    'cache-control': 'max-age=0, no-cache, no-store, must-revalidate',
+    'paypal-debug-id': 'e17ac21f0bf54',
+    pragma: 'no-cache',
+    'x-paypal-token-service': 'IAAS',
+    'strict-transport-security': 'max-age=31536000; includeSubDomains',
+    'edge-control': 'max-age=0',
+    'accept-ranges': 'bytes',
+    date: 'Tue, 18 Jul 2023 14:58:01 GMT',
+    via: '1.1 varnish',
+    'x-served-by': 'cache-fra-etou8220067-FRA',
+    'x-cache': 'MISS',
+    'x-cache-hits': '0',
+    'x-timer': 'S1689692281.964920,VS0,VE265',
+  },
+  config: {
+    transformRequest: [Array],
+    transformResponse: [Array],
+    timeout: 0,
+    xsrfCookieName: 'XSRF-TOKEN',
+    xsrfHeaderName: 'X-XSRF-TOKEN',
+    maxContentLength: -1,
+    maxBodyLength: -1,
+  },
+  data: {
+    error: 'Some entity Error',
+    error_description: 'Business validation error',
+  },
+};
+
+export const paypalGetOrderOkResponse = {
+  id: '5O190127TN364715T',
+  status: 'APPROVED',
+  intent: 'CAPTURE',
+  payment_source: {
+    paypal: {
+      name: {
+        given_name: 'John',
+        surname: 'Doe',
+      },
+      email_address: 'customer@example.com',
+      account_id: 'QYR5Z8XDVJNXQ',
+    },
+  },
+  purchase_units: [
+    {
+      reference_id: 'd9f80740-38f0-11e8-b467-0ed5f89f718b',
+      amount: {
+        currency_code: 'USD',
+        value: '100.00',
+      },
+    },
+  ],
+  payer: {
+    name: {
+      given_name: 'John',
+      surname: 'Doe',
+    },
+    email_address: 'customer@example.com',
+    payer_id: 'QYR5Z8XDVJNXQ',
+  },
+  create_time: '2018-04-01T21:18:49Z',
+  links: [
+    {
+      href: 'https://api-m.paypal.com/v2/checkout/orders/5O190127TN364715T',
+      rel: 'self',
+      method: 'GET',
+    },
+    {
+      href: 'https://www.paypal.com/checkoutnow?token=5O190127TN364715T',
+      rel: 'approve',
+      method: 'GET',
+    },
+    {
+      href: 'https://api-m.paypal.com/v2/checkout/orders/5O190127TN364715T',
+      rel: 'update',
+      method: 'PATCH',
+    },
+    {
+      href: 'https://api-m.paypal.com/v2/checkout/orders/5O190127TN364715T/capture',
+      rel: 'capture',
+      method: 'POST',
+    },
+  ],
+};

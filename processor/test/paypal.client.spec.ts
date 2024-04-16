@@ -6,11 +6,13 @@ import {
   paypalNotFoundResponse,
   paypalCreateOrderOkResponse,
   paypalRefundOkResponse,
+  paypalErrorResponse,
+  paypalGetOrderOkResponse,
 } from './utils/mock-paypal-response-data';
 import { paypalCreateOrderRequest } from './utils/mock-paypal-request-data';
 import { setupServer } from 'msw/node';
 import { PaypalAPI } from '../src/clients/paypal.client';
-import { mockPaypalRequest } from './utils/paypal-request.mock';
+import { mockPaypalGetRequest, mockPaypalRequest } from './utils/paypal-request.mock';
 import { OrderStatus, PaypalBasePath, PaypalUrls } from '../src/clients/types/paypal.client.type';
 
 describe('Paypal API', () => {
@@ -86,7 +88,58 @@ describe('Paypal API', () => {
       expect(result?.status).toBe(OrderStatus.PAYER_ACTION_REQUIRED);
       expect(result?.id).toBe(paypalCreateOrderOkResponse.id);
     });
+
+    it('should return paypal error, if error occurs via paypal', async () => {
+      // Given
+
+      mockServer.use(
+        mockPaypalRequest(PaypalBasePath.TEST, `${PaypalUrls.AUTHENTICATION}`, 200, paypalAuthenticationResponse),
+        mockPaypalRequest(PaypalBasePath.TEST, PaypalUrls.ORDERS, 299, paypalErrorResponse),
+      );
+
+      // when
+      const result = api.createOrder(paypalCreateOrderRequest);
+
+      // then
+      expect(result).rejects.toThrow();
+    });
   });
+
+  describe('Get PayPal Order', () => {
+    it('should fetch an order', async () => {
+      // Given
+      const orderId = paypalCaptureOrderOkResponse.id;
+      const url = PaypalUrls.GET_ORDERS.replace(/{resourceId}/g, orderId);
+      mockServer.use(
+        mockPaypalRequest(PaypalBasePath.TEST, `${PaypalUrls.AUTHENTICATION}`, 200, paypalAuthenticationResponse),
+        mockPaypalGetRequest(PaypalBasePath.TEST, url, 200, paypalGetOrderOkResponse),
+      );
+
+      // when
+      const result = await api.getOrder(orderId);
+
+      // then
+      expect(result?.id).toBe(paypalGetOrderOkResponse.id);
+      expect(result.purchase_units).toMatchObject(paypalGetOrderOkResponse.purchase_units);
+    });
+
+    it('should return an error when PayPal return a not found order', async () => {
+      // Given
+      const orderId = paypalCaptureOrderOkResponse.id;
+      const url = PaypalUrls.GET_ORDERS.replace(/{resourceId}/g, orderId);
+      mockServer.use(
+        mockPaypalRequest(PaypalBasePath.TEST, `${PaypalUrls.AUTHENTICATION}`, 200, paypalAuthenticationResponse),
+        mockPaypalGetRequest(PaypalBasePath.TEST, url, 404, paypalGetOrderOkResponse),
+      );
+
+      // when
+      const result = api.getOrder(orderId);
+
+      // then
+      await expect(result).rejects.toThrow('an error occurred in paypal');
+    });
+  });
+
   describe('Capture PayPal Order', () => {
     it('should capture the order', async () => {
       // Given

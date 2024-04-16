@@ -1,4 +1,24 @@
 import { Payment, Transaction } from '@commercetools/connect-payments-sdk';
+import { PaymentAmount } from '@commercetools/connect-payments-sdk/dist/commercetools/types/payment.type';
+
+const mockChargePaymentTransaction: Transaction = {
+  id: 'dummy-transaction-id',
+  timestamp: '2024-02-13T00:00:00.000Z',
+  type: 'Charge',
+  interactionId: 'some-id',
+  amount: {
+    type: 'centPrecision',
+    centAmount: 120000,
+    currencyCode: 'GBP',
+    fractionDigits: 2,
+  },
+  state: 'Success',
+};
+
+export const mockGetPaymentAmount: PaymentAmount = {
+  centAmount: 150000,
+  currencyCode: 'USD',
+};
 
 export const mockGetPaymentResult: Payment = {
   id: '123456',
@@ -15,23 +35,10 @@ export const mockGetPaymentResult: Payment = {
     name: { 'en-US': 'Debit Card', 'en-GB': 'Debit Card' },
   },
   paymentStatus: { interfaceText: 'Paid' },
-  transactions: [],
+  transactions: [mockChargePaymentTransaction],
   interfaceInteractions: [],
   createdAt: '2024-02-13T00:00:00.000Z',
   lastModifiedAt: '2024-02-13T00:00:00.000Z',
-};
-
-const mockCancelPaymentTransaction: Transaction = {
-  id: 'dummy-transaction-id',
-  timestamp: '2024-02-13T00:00:00.000Z',
-  type: 'CancelAuthorization',
-  amount: {
-    type: 'centPrecision',
-    centAmount: 120000,
-    currencyCode: 'GBP',
-    fractionDigits: 2,
-  },
-  state: 'Initial',
 };
 
 export const mockUpdatePaymentResult: Payment = {
@@ -49,7 +56,7 @@ export const mockUpdatePaymentResult: Payment = {
     name: { 'en-US': 'Debit Card', 'en-GB': 'Debit Card' },
   },
   paymentStatus: { interfaceText: 'Paid' },
-  transactions: [mockCancelPaymentTransaction],
+  transactions: [mockChargePaymentTransaction],
   interfaceInteractions: [],
   createdAt: '2024-02-13T00:00:00.000Z',
   lastModifiedAt: '2024-02-13T00:00:00.000Z',
