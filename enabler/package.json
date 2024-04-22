@@ -12,8 +12,8 @@
     "serve": "npm run build && serve public -l 3000 --cors"
   },
   "dependencies": {
-    "@paypal/paypal-js": "8.0.4",
-    "serve": "14.2.1"
+    "@paypal/paypal-js": "8.0.5",
+    "serve": "14.2.2"
   },
   "devDependencies": {
     "@types/node": "20.12.7",
@@ -21,7 +21,7 @@
     "sass": "1.75.0",
     "ts-jest": "^29.1.2",
     "typescript": "5.4.5",
-    "vite": "5.2.8",
+    "vite": "5.2.10",
     "vite-plugin-css-injected-by-js": "3.5.0"
   }
 }
