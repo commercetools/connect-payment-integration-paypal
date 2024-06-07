@@ -24,7 +24,6 @@
 
 
     <main role="main">
-
       <section class="jumbotron text-center">
         <div class="container">
           <form action="/action_page.php">
@@ -32,9 +31,17 @@
               <h1 class="h3 mb-3 font-weight-normal">Dev Site</h1>
               <p>Use this site for development purposes</p>
             </div>
-            <div class="form-group">
-              <label for="cartId">Cart ID:</label>
-              <input type="text" class="form-control" id="cartId">
+            <div class="row">
+              <div class="form-group col-md-6">
+                <div>
+                  <label for="cartId">Cart ID:</label>
+                  <input type="text" class="form-control" id="cartId">
+                </div>
+              </div>
+              <div class="form-group col-md-6">
+                <label for="paymentMethod">Payment Method:</label>
+                <select class="form-control" id="paymentMethod" required></select>
+              </div>
             </div>
             <button id="createCheckout" class="btn btn-lg btn-primary btn-block" type="submit">Create checkout</button>
           </form>
@@ -46,11 +53,45 @@
 
           <script type="module">
             import { Enabler } from '/src/main.ts';
+
+            document.addEventListener('DOMContentLoaded', async () => {
+              const paymentMethodSelect = document.getElementById('paymentMethod');
+              const response = await fetch('http://localhost:9000/jwt/token', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  "iss": "https://issuer.com",
+                  "sub": "test-sub",
+                  "https://issuer.com/claims/project_key": `${__VITE_CTP_PROJECT_KEY__}`
+                })
+              });
+
+              const accessToken = await response.json()
+
+              const res = await fetch(`${__VITE_PROCESSOR_URL__}/operations/payment-components`, {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${accessToken.token}`
+                }
+              })
+              const paymentMethods = await res.json();
+              paymentMethods.components.forEach(method => {
+                const option = document.createElement('option');
+                option.value = method.type;
+                option.textContent = method.type;
+                paymentMethodSelect.appendChild(option);
+              });
+            });
       
             document.getElementById('createCheckout').addEventListener('click', async (event) => {
               event.preventDefault();
               const cartId = document.getElementById('cartId').value;
               const sessionId = await getSessionId(cartId);
+
+              const paymentMethodSelect = document.getElementById('paymentMethod');
+              const selectedValue = paymentMethodSelect.value;
 
               const enabler = new Enabler({
                 processorUrl: __VITE_PROCESSOR_URL__,
@@ -63,17 +104,45 @@
                   console.error('onError', err)
                 }
               });
-              const builder = await enabler.createComponentBuilder('paypal');
+
+              const builder = await enabler.createComponentBuilder(selectedValue);
               const component = await builder.build({
-                onClick: () => { // to be used for validation
-                  return false // change to true, to test payment flow
+                onPayButtonClick: async () => { // to be used for validation
+                  const termsChecked = document.getElementById('termsCheckbox').checked;
+                  if (!termsChecked) {
+                    event.preventDefault();
+                    alert('You must agree to the terms and conditions.');
+                    return Promise.reject('error-occured')
+                  }
+                  return Promise.resolve() // change to true, to test payment flow
                 }
               })
+
+              if (builder.componentHasSubmit) {
+                const customButton = document.createElement('button');
+                customButton.textContent = 'Submit Payment';
+                customButton.className = 'btn btn-lg btn-primary btn-block';
+                customButton.addEventListener('click', () => {
+                  const termsChecked = document.getElementById('termsCheckbox').checked;
+                  if (!termsChecked) {
+                    event.preventDefault();
+                    alert('You must agree to the terms and conditions.');
+                    return
+                  }
+                  component.submit();
+                });
+                document.getElementById('card-component').appendChild(customButton);
+
+                return
+              }
               component.mount('#card-component')
             });
-      
           </script>
       
+          <div class="form-group form-check">
+            <input type="checkbox" class="form-check-input" id="termsCheckbox" required>
+            <label class="form-check-label" for="termsCheckbox">I agree to the terms and conditions</label>
+          </div>
           <div id="card-component"></div>
         </div>
       </div>
