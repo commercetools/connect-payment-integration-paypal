@@ -148,22 +148,33 @@
                   selectedValue
                 );
                 const component = await builder.build({
-                  onPayButtonClick: async () => {
-                    // to be used for validation
-                    const termsChecked =
-                      document.getElementById("termsCheckbox").checked;
-                    if (!termsChecked) {
-                      event.preventDefault();
-                      alert("You must agree to the terms and conditions.");
-                      return Promise.reject("error-occured");
-                    }
-                    return Promise.resolve(); // change to true, to test payment flow
-                  },
+                  showPayButton: !builder.componentHasSubmit,
+                  ...(builder.componentHasSubmit
+                    ? {}
+                    : {
+                        onPayButtonClick: async () => {
+                          // to be used for validation
+                          const termsChecked =
+                            document.getElementById("termsCheckbox").checked;
+                          if (!termsChecked) {
+                            event.preventDefault();
+                            alert(
+                              "You must agree to the terms and conditions."
+                            );
+                            return Promise.reject("error-occurred");
+                          }
+                          return Promise.resolve(); // change to true, to test payment flow
+                        },
+                      }),
                 });
 
                 if (builder.componentHasSubmit) {
+                  if (selectedValue === 'card') {
+                    component.mount("#container--external");
+                  }
+                  
                   const customButton = document.createElement("button");
-                  customButton.textContent = "Submit Payment";
+                  customButton.textContent = "Pay with "+ selectedValue;
                   customButton.className = "btn btn-lg btn-primary btn-block";
                   customButton.addEventListener("click", () => {
                     const termsChecked =
@@ -176,15 +187,15 @@
                     component.submit();
                   });
                   document
-                    .getElementById("card-component")
+                    .getElementById("container--internal")
                     .appendChild(customButton);
-
-                  return;
+                } else{
+                  component.mount("#container--external");
                 }
-                component.mount("#card-component");
               });
           </script>
 
+          <div id="container--external"></div>
           <div class="form-group form-check">
             <input
               type="checkbox"
@@ -196,7 +207,7 @@
               >I agree to the terms and conditions</label
             >
           </div>
-          <div id="card-component"></div>
+          <div id="container--internal"></div>
         </div>
       </div>
     </main>

@@ -156,3 +156,28 @@ Here you can see the details about various variables in configuration
 - PAYPAL_CLIENT_ID: The unique identifier of a PayPal account.
 - PAYPAL_CLIENT_SECRET: It is used to authenticate a PayPal client ID. Both ID and secret are required to obtain access token for PayPal API calls. For details, please refer to [Get started with PayPal REST APIs](https://developer.paypal.com/api/rest/)
 - PAYPAL_WEBHOOK_ID: It represents unique identifier of a notification event from PayPal platform.
+
+## Development
+In order to get started developing this connector certain configuration are necessary, most of which involve updating environment variables in both services (enabler, processor).
+
+#### Configuration steps
+
+#### 1. Environment Variable Setup
+
+Navigate to each service directory and duplicate the .env.template file, renaming the copy to .env. Populate the newly created .env file with the appropriate values.
+
+```bash
+cp .env.template .env
+```
+
+#### 2. Spin Up Components via Docker Compose
+With the help of docker compose, you are able to spin up all necessary components required for developing the connector by running the following command from the root directory;
+
+```bash
+docker compose up
+```
+
+This command would start 3 required services, necessary for development
+1. JWT Server
+2. Enabler
+3. Processor

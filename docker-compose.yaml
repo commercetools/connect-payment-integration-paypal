@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  jwt-server:
+    image: node:alpine
+    restart: always
+    networks:
+      - connector-network
+    command: 
+      - npx
+      - --package
+      - jwt-mock-server
+      - -y
+      - start
+    ports:
+      - 9000:9000
+
+  enabler:
+    build:
+      context: ./enabler
+    restart: always
+    depends_on:
+      - processor
+    networks:
+      - connector-network
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]
+    env_file:
+      - ./enabler/.env
+    ports:
+      - 3000:3000
+  
+  processor:
+    build:
+      context: ./processor
+    networks:
+      - connector-network
+    depends_on:
+      - jwt-server
+    env_file:
+      - ./processor/.env
+    environment:
+      - CTP_JWKS_URL=http://jwt-server:9000/jwt/.well-known/jwks.json
+      - CTP_JWT_ISSUER=https://issuer.com
+    ports:
+      - 8080:8080
+
+networks:
+  connector-network:
+    driver: bridge
