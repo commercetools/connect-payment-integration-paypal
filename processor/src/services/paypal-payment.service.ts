@@ -17,6 +17,7 @@ import {
 import { getCartIdFromContext, getPaymentInterfaceFromContext } from '../libs/fastify/context/context';
 import { PaypalAPI } from '../clients/paypal.client';
 import {
+  Capture,
   CaptureOrderResponse,
   CreateOrderRequest,
   OrderStatus,
@@ -46,6 +47,7 @@ import { SupportedPaymentComponentsSchemaDTO } from '../dtos/operations/payment-
 import { AbstractPaymentService } from './abstract-payment.service';
 import { NotificationConverter } from './converters/notification.converter';
 import { log } from '../libs/logger';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const packageJSON = require('../../package.json');
 
 export class PaypalPaymentService extends AbstractPaymentService {
@@ -450,7 +452,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
     };
   }
 
-  private extractCaptureIdAndStatus(data: CaptureOrderResponse): any {
+  private extractCaptureIdAndStatus(data: CaptureOrderResponse): Capture {
     if (
       data.purchase_units &&
       data.purchase_units.length > 0 &&
