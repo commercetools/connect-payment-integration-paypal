@@ -12,15 +12,15 @@
     "dev": "ts-node src/main.ts",
     "watch": "nodemon --watch \"src/**\" --ext \"ts,json\" --ignore \"src/**/*.spec.ts\" --exec \"ts-node src/main.ts\"",
     "test": "jest --detectOpenHandles",
-    "connector:post-deploy": "node src/connectors/post-deploy.ts",
-    "connector:pre-undeploy": "node src/connectors/pre-undeploy.ts"
+    "connector:post-deploy": "node dist/connectors/post-deploy.js",
+    "connector:pre-undeploy": "node dist/connectors/pre-undeploy.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@commercetools-backend/loggers": "22.35.0",
-    "@commercetools/connect-payments-sdk": "0.10.1",
+    "@commercetools/connect-payments-sdk": "0.11.0",
     "@fastify/autoload": "6.0.2",
     "@fastify/cors": "10.0.1",
     "@fastify/formbody": "8.0.1",

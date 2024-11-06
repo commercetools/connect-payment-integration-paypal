@@ -14,7 +14,11 @@ import {
   NotificationPayloadDTO,
 } from '../dtos/paypal-payment.dto';
 
-import { getCartIdFromContext, getPaymentInterfaceFromContext } from '../libs/fastify/context/context';
+import {
+  getCartIdFromContext,
+  getFutureOrderNumberFromContext,
+  getPaymentInterfaceFromContext,
+} from '../libs/fastify/context/context';
 import { PaypalAPI } from '../clients/paypal.client';
 import {
   Capture,
@@ -374,6 +378,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
     amount: Money,
     payload: CreateOrderRequestDTO,
   ): CreateOrderRequest {
+    const futureOrderNumber = getFutureOrderNumberFromContext();
     return {
       ...payload,
       purchase_units: [
@@ -385,6 +390,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
             value: parseAmount(amount.centAmount),
           },
           shipping: this.convertShippingAddress(cart.shippingAddress),
+          ...(futureOrderNumber && { custom_id: futureOrderNumber }),
         },
       ],
     };

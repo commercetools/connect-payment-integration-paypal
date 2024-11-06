@@ -97,6 +97,7 @@ type PurchaseUnits = {
   items?: PaypalItem[];
   shipping: PaypalShipping;
   payments?: Payment;
+  custom_id?: string;
 };
 
 export type CreateOrderRequest = {
