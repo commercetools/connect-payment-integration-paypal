@@ -1,0 +1,94 @@
+google-22: Pulling from buildpacks/builder
+Digest: sha256:eca548ddcf2da1573eea7d1fa93ded066be0892f0fe52720b40051340f94b6a8
+Status: Image is up to date for gcr.io/buildpacks/builder:google-22
+latest: Pulling from buildpacks/google-22/run
+Digest: sha256:48f538c93d2514842dd48f242cacef00b6e98f9aa0fbbe71b97d816a8d7a2bc9
+Status: Image is up to date for gcr.io/buildpacks/google-22/run:latest
+===> ANALYZING
+Timer: Analyzer started at 2024-11-07T16:30:42Z
+Image with name "connect-payment-integration-paypal_enabler" not found
+Timer: Analyzer ran for 489.209µs and ended at 2024-11-07T16:30:42Z
+===> DETECTING
+Timer: Detector started at 2024-11-07T16:30:42Z
+4 of 7 buildpacks participating
+google.nodejs.runtime    1.0.0
+google.nodejs.npm        1.1.0
+google.utils.label-image 0.0.2
+node-test-entrypoint     0.0.1
+Timer: Detector ran for 2.650873751s and ended at 2024-11-07T16:30:44Z
+===> RESTORING
+Timer: Restorer started at 2024-11-07T16:30:44Z
+Timer: Restorer ran for 1.673625ms and ended at 2024-11-07T16:30:44Z
+===> BUILDING
+Timer: Builder started at 2024-11-07T16:30:44Z
+=== Node.js - Runtime (google.nodejs.runtime@1.0.0) ===
+2024/11/07 16:30:44 [DEBUG] GET https://dl.google.com/runtimes/ubuntu2204/nodejs/version.json
+***** CACHE MISS: "nodejs"
+Installing Node.js v20.18.0.
+2024/11/07 16:30:45 [DEBUG] GET https://dl.google.com/runtimes/ubuntu2204/nodejs/nodejs-20.18.0.tar.gz
+=== Node.js - Npm (google.nodejs.npm@1.1.0) ===
+***** CACHE MISS: "npm_modules"
+Installing application dependencies.
+--------------------------------------------------------------------------------
+Running "npm ci --quiet --no-fund --no-audit (NODE_ENV=development)"
+
+added 411 packages in 8s
+npm notice
+npm notice New minor version of npm available! 10.8.2 -> 10.9.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v10.9.0
+npm notice To update run: npm install -g npm@10.9.0
+npm notice
+Done "npm ci --quiet --no-fund --no-audit (NODE_ENV=development)" (8.868568837s)
+--------------------------------------------------------------------------------
+Running "npm run build"
+
+> enabler@1.1.0 build
+> tsc && vite build
+
+vite v5.4.10 building for production...
+transforming...
+✓ 6 modules transformed.
+
+(!) The public directory feature may not work correctly. outDir /workspace/enabler/public and publicDir /workspace/enabler/public are not separate folders.
+
+rendering chunks...
+computing gzip size...
+public/connector-enabler.es.js  10.81 kB │ gzip: 3.60 kB
+public/connector-enabler.umd.js  8.20 kB │ gzip: 3.34 kB
+✓ built in 596ms
+Done "npm run build" (6.397887295s)
+Retaining devDependencies because $NODE_ENV="development".
+***** CACHE MISS: "watchexec"
+Installing watchexec v1.12.0
+--------------------------------------------------------------------------------
+Running "bash -c curl --fail --show-error --silent --location --retry 3 https://github.com/watchexec/watchexec/releases/download/1.12.0/watchexec-1.12.0-x86_64-unknown-linux-gnu.tar.xz | tar xJ --directory /layers/google.nodejs.npm/watchexec/bin --strip-components=1 --wildcards \"*watchexec\""
+Done "bash -c curl --fail --show-error --silent --location --retry..." (1.283962375s)
+=== Utils - Label Image (google.utils.label-image@0.0.2) ===
+Timer: Builder ran for 21.297294094s and ended at 2024-11-07T16:31:06Z
+===> EXPORTING
+Timer: Exporter started at 2024-11-07T16:31:06Z
+Adding layer 'google.nodejs.runtime:node'
+Adding layer 'google.nodejs.npm:devmode_scripts'
+Adding layer 'google.nodejs.npm:env'
+Adding layer 'google.nodejs.npm:watchexec'
+Adding layer 'buildpacksio/lifecycle:launch.sbom'
+Adding 1/1 app layer(s)
+Adding layer 'buildpacksio/lifecycle:launcher'
+Adding layer 'buildpacksio/lifecycle:config'
+Adding layer 'buildpacksio/lifecycle:process-types'
+Adding label 'io.buildpacks.lifecycle.metadata'
+Adding label 'io.buildpacks.build.metadata'
+Adding label 'io.buildpacks.project.metadata'
+Setting default process type 'web'
+Timer: Saving connect-payment-integration-paypal_enabler... started at 2024-11-07T16:31:14Z
+*** Images (69a1ee5714b5):
+      connect-payment-integration-paypal_enabler
+      connect-payment-integration-paypal_enabler:QRpTyvIzD2EIVXD0wcb
+Timer: Saving connect-payment-integration-paypal_enabler... ran for 3.351291668s and ended at 2024-11-07T16:31:17Z
+Timer: Exporter ran for 11.746952589s and ended at 2024-11-07T16:31:17Z
+Timer: Cache started at 2024-11-07T16:31:17Z
+Adding cache layer 'google.nodejs.runtime:node'
+Adding cache layer 'google.nodejs.npm:npm_modules'
+Adding cache layer 'google.nodejs.npm:watchexec'
+Timer: Cache ran for 1.424568875s and ended at 2024-11-07T16:31:19Z
+Successfully built image 'connect-payment-integration-paypal_enabler'
