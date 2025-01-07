@@ -22,7 +22,7 @@ import { mockGetCartResult } from '../utils/mock-cart-data';
 import { HealthCheckResult } from '@commercetools/connect-payments-sdk';
 import * as StatusHandler from '@commercetools/connect-payments-sdk/dist/api/handlers/status.handler';
 import * as FastifyContext from '../../src/libs/fastify/context/context';
-import { CreateOrderRequestDTO, Intent } from '../../src/dtos/paypal-payment.dto';
+import { CreateOrderRequestDTO, Intent, NotificationPayloadDTO } from '../../src/dtos/paypal-payment.dto';
 
 interface FlexibleConfig {
   [key: string]: string | number | undefined; // Adjust the type according to your config values
@@ -44,7 +44,7 @@ describe('paypal-payment.service', () => {
     ctCartService: paymentSDK.ctCartService,
     ctPaymentService: paymentSDK.ctPaymentService,
   };
-  const paymentService: AbstractPaymentService = new PaypalPaymentService(opts);
+  const paymentService: PaypalPaymentService = new PaypalPaymentService(opts);
 
   beforeAll(() => {
     mockServer.listen({
@@ -230,6 +230,37 @@ describe('paypal-payment.service', () => {
 
       const result = await paymentService.modifyPayment(modifyPaymentOpts);
       expect(result?.outcome).toStrictEqual('approved');
+    });
+
+    test.only('notifications', async () => {
+      // TODO: SCC-2800: implement notification paypal-payment-service tests
+
+      // Given
+      mockServer.use(
+        mockPaypalRequest(PaypalBasePath.TEST, `${PaypalUrls.AUTHENTICATION}`, 200, paypalAuthenticationResponse),
+      );
+
+      jest.spyOn(DefaultPaymentService.prototype, 'getPayment').mockResolvedValue(mockGetPaymentResult);
+      jest.spyOn(DefaultPaymentService.prototype, 'updatePayment').mockResolvedValue(mockUpdatePaymentResult);
+
+      const paymentId = '755c0249-ad4a-43e2-91e8-c494804bfead';
+
+      const payPalNotification: NotificationPayloadDTO = {
+        id: '704dc79f-ac61-47da-9f84-3cc4ca495210',
+        event_type: 'PAYMENT.CAPTURE.COMPLETED',
+        resource: {
+          amount: {
+            currency_code: 'EUR',
+            value: '10.99',
+          },
+          id: '2c01bab4-9024-49d1-9d19-39f607977ca0',
+          invoice_id: paymentId,
+          status: '',
+        },
+        resource_type: '',
+      };
+
+      const result = await paymentService.processNotification({ data: payPalNotification });
     });
   });
 });
