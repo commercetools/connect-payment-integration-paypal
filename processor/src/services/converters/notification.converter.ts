@@ -3,7 +3,7 @@ import {
   TransactionData,
   UpdatePayment,
   Money,
-  MoneyConverters,
+  CurrencyConverters,
 } from '@commercetools/connect-payments-sdk';
 import { TransactionStates, TransactionTypes, NotificationEventType } from '../types/paypal-payment.type';
 import { NotificationPayloadDTO, NotificationResourceDTO } from '../../dtos/paypal-payment.dto';
@@ -104,7 +104,7 @@ export class NotificationConverter {
 
     const unitsAsInteger = this.parseAndValidateNumberInteger(unitsAsString);
     const centsAsInteger = this.parseAndValidateNumberInteger(centsAsString);
-    const unitsAsIntegerConverted = MoneyConverters.convert(unitsAsInteger, fractionDigit);
+    const unitsAsIntegerConverted = CurrencyConverters.convert(unitsAsInteger, fractionDigit);
 
     const cocoCentAmount = unitsAsIntegerConverted + centsAsInteger;
     return cocoCentAmount;
