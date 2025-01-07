@@ -7,7 +7,6 @@ import { DefaultCartService } from '@commercetools/connect-payments-sdk/dist/com
 import { mockGetPaymentAmount, mockGetPaymentResult, mockUpdatePaymentResult } from '../utils/mock-payment-data';
 import * as Config from '../../src/config/config';
 import { PaypalPaymentServiceOptions } from '../../src/services/types/paypal-payment.type';
-import { AbstractPaymentService } from '../../src/services/abstract-payment.service';
 import { PaypalPaymentService } from '../../src/services/paypal-payment.service';
 import { setupServer } from 'msw/node';
 import { PaypalUrls, PaypalBasePath } from '../../src/clients/types/paypal.client.type';
@@ -19,7 +18,7 @@ import {
 } from '../utils/mock-paypal-response-data';
 import { mockPaypalGetRequest, mockPaypalRequest } from '../utils/paypal-request.mock';
 import { mockGetCartResult } from '../utils/mock-cart-data';
-import { HealthCheckResult } from '@commercetools/connect-payments-sdk';
+import { HealthCheckResult, Payment } from '@commercetools/connect-payments-sdk';
 import * as StatusHandler from '@commercetools/connect-payments-sdk/dist/api/handlers/status.handler';
 import * as FastifyContext from '../../src/libs/fastify/context/context';
 import { CreateOrderRequestDTO, Intent, NotificationPayloadDTO } from '../../src/dtos/paypal-payment.dto';
@@ -231,27 +230,29 @@ describe('paypal-payment.service', () => {
       const result = await paymentService.modifyPayment(modifyPaymentOpts);
       expect(result?.outcome).toStrictEqual('approved');
     });
+  });
 
-    test.only('notifications', async () => {
-      // TODO: SCC-2800: implement notification paypal-payment-service tests
-
+  describe('notifications', () => {
+    test('should process a notification', async () => {
       // Given
       mockServer.use(
         mockPaypalRequest(PaypalBasePath.TEST, `${PaypalUrls.AUTHENTICATION}`, 200, paypalAuthenticationResponse),
       );
 
-      jest.spyOn(DefaultPaymentService.prototype, 'getPayment').mockResolvedValue(mockGetPaymentResult);
-      jest.spyOn(DefaultPaymentService.prototype, 'updatePayment').mockResolvedValue(mockUpdatePaymentResult);
+      jest.spyOn(DefaultPaymentService.prototype, 'getPayment').mockResolvedValueOnce(mockGetPaymentResult);
+      jest.spyOn(DefaultPaymentService.prototype, 'updatePayment').mockImplementationOnce(async () => {
+        return {} as Payment;
+      });
 
-      const paymentId = '755c0249-ad4a-43e2-91e8-c494804bfead';
+      const paymentId = mockGetPaymentResult.id;
 
       const payPalNotification: NotificationPayloadDTO = {
         id: '704dc79f-ac61-47da-9f84-3cc4ca495210',
         event_type: 'PAYMENT.CAPTURE.COMPLETED',
         resource: {
           amount: {
-            currency_code: 'EUR',
-            value: '10.99',
+            currency_code: 'GBR',
+            value: '120000.00',
           },
           id: '2c01bab4-9024-49d1-9d19-39f607977ca0',
           invoice_id: paymentId,
@@ -260,7 +261,21 @@ describe('paypal-payment.service', () => {
         resource_type: '',
       };
 
-      const result = await paymentService.processNotification({ data: payPalNotification });
+      await paymentService.processNotification({ data: payPalNotification });
+
+      const expectedPayloadToUpdatePayment = {
+        id: '123456',
+        transaction: {
+          type: 'Charge',
+          state: 'Success',
+          amount: { centAmount: 12000000, currencyCode: 'GBR' },
+          interactionId: '2c01bab4-9024-49d1-9d19-39f607977ca0',
+        },
+      };
+
+      expect(jest.spyOn(DefaultPaymentService.prototype, 'updatePayment')).toHaveBeenCalledWith(
+        expectedPayloadToUpdatePayment,
+      );
     });
   });
 });
