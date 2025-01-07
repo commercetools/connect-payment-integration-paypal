@@ -13,10 +13,10 @@ import {
   PaypalBasePath,
   PaypalUrls,
   RefundResponse,
-  parseAmount,
 } from './types/paypal.client.type';
-import { ErrorGeneral, Money } from '@commercetools/connect-payments-sdk';
+import { ErrorGeneral, Money, Payment } from '@commercetools/connect-payments-sdk';
 import { randomUUID } from 'crypto';
+import { convertCoCoAmountToPayPalAmount } from '../services/converters/amount.converter';
 
 export class PaypalAPI implements IPaypalPaymentAPI {
   public async healthCheck(): Promise<Response | undefined> {
@@ -216,10 +216,11 @@ export class PaypalAPI implements IPaypalPaymentAPI {
   public async refundPartialPayment(
     paymentReference: string | undefined,
     payload: AmountSchemaDTO, // amount should be converted before sent, create a static method for converting amount in this class, to be used by any service needing it PAYPALAPI.convert_amount
+    payment: Payment,
   ): Promise<RefundResponse> {
     const url = this.buildResourceUrl(config.paypalEnvironment, PaypalUrls.ORDERS_REFUND, paymentReference);
 
-    const paypalAmount = this.convertToPaypalAmount(payload);
+    const paypalAmount = this.convertToPaypalAmount(payload, payment.amountPlanned.fractionDigits);
 
     const auth = await this.authenticateRequest();
     const options = {
@@ -437,11 +438,11 @@ export class PaypalAPI implements IPaypalPaymentAPI {
     }
   }
 
-  private convertToPaypalAmount(amount: Money) {
+  private convertToPaypalAmount(amount: Money, fractionDigits: number) {
     return {
       amount: {
         currency_code: amount.currencyCode,
-        value: parseAmount(amount.centAmount),
+        value: convertCoCoAmountToPayPalAmount(amount, fractionDigits),
       },
     };
   }

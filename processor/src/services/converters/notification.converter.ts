@@ -16,28 +16,28 @@ export class NotificationConverter {
         return {
           type: TransactionTypes.CHARGE,
           state: TransactionStates.SUCCESS,
-          amount: this.convertAmount(item.resource),
+          amount: this.convertPayPalAmountToCoCoAmount(item.resource),
           interactionId: item.resource.id,
         };
       case NotificationEventType.PAYMENT_CAPTURE_DECLINED:
         return {
           type: TransactionTypes.CHARGE,
           state: TransactionStates.FAILURE,
-          amount: this.convertAmount(item.resource),
+          amount: this.convertPayPalAmountToCoCoAmount(item.resource),
           interactionId: item.resource.id,
         };
       case NotificationEventType.PAYMENT_CAPTURE_REFUNDED:
         return {
           type: TransactionTypes.REFUND,
           state: TransactionStates.SUCCESS,
-          amount: this.convertAmount(item.resource),
+          amount: this.convertPayPalAmountToCoCoAmount(item.resource),
           interactionId: item.resource.id,
         };
       case NotificationEventType.PAYMENT_CAPTURE_REVERSED:
         return {
           type: TransactionTypes.REFUND,
           state: TransactionStates.SUCCESS,
-          amount: this.convertAmount(item.resource),
+          amount: this.convertPayPalAmountToCoCoAmount(item.resource),
           interactionId: item.resource.id,
         };
       default:
@@ -50,7 +50,8 @@ export class NotificationConverter {
     }
   }
 
-  private convertAmount(item: NotificationResourceDTO): Money {
+  private convertPayPalAmountToCoCoAmount(item: NotificationResourceDTO): Money {
+    // TODO: SCC-2800: notification: converter processing fix parseAmount fractionDigits
     return {
       centAmount: this.parseStringAmountToCentAmount(item.amount.value),
       currencyCode: item.amount.currency_code,
@@ -58,6 +59,7 @@ export class NotificationConverter {
   }
 
   private parseStringAmountToCentAmount(amount: string): number {
+    // TODO: SCC-2800: notification: what to fill in for the radix?
     const [units, cents] = amount.split('.').map((part) => parseInt(part, 10));
     if (isNaN(units) || isNaN(cents)) {
       throw new ErrorGeneral('Invalid amount format', {
@@ -67,6 +69,7 @@ export class NotificationConverter {
       });
     }
 
+    // TODO: SCC-2800: notification: take into account the fractionDigits instead of hardcoded values
     return units * 100 + cents;
   }
 }

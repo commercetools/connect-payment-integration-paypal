@@ -14,6 +14,7 @@ import { setupServer } from 'msw/node';
 import { PaypalAPI } from '../src/clients/paypal.client';
 import { mockPaypalGetRequest, mockPaypalRequest } from './utils/paypal-request.mock';
 import { OrderStatus, PaypalBasePath, PaypalUrls } from '../src/clients/types/paypal.client.type';
+import { Payment } from '@commercetools/connect-payments-sdk';
 
 describe('Paypal API', () => {
   const api = new PaypalAPI();
@@ -186,11 +187,24 @@ describe('Paypal API', () => {
         mockPaypalRequest(PaypalBasePath.TEST, url, 200, paypalRefundOkResponse),
       );
 
+      const payment: Payment = {
+        amountPlanned: {
+          centAmount: 3000,
+          currencyCode: 'EUR',
+          fractionDigits: 2,
+          type: 'centPrecision',
+        },
+      } as Payment;
+
       // when
-      const result = await api.refundPartialPayment(captureId, {
-        currencyCode: 'EUR',
-        centAmount: 3000,
-      });
+      const result = await api.refundPartialPayment(
+        captureId,
+        {
+          currencyCode: 'EUR',
+          centAmount: 3000,
+        },
+        payment,
+      );
 
       // then
       expect(result.status).toBe(OrderStatus.COMPLETED);

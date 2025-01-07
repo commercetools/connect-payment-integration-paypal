@@ -26,7 +26,6 @@ import {
   CreateOrderRequest,
   OrderStatus,
   PaypalShipping,
-  parseAmount,
 } from '../clients/types/paypal.client.type';
 import { PaymentModificationStatus } from '../dtos/operations/payment-intents.dto';
 import { randomUUID } from 'crypto';
@@ -51,6 +50,7 @@ import { SupportedPaymentComponentsSchemaDTO } from '../dtos/operations/payment-
 import { AbstractPaymentService } from './abstract-payment.service';
 import { NotificationConverter } from './converters/notification.converter';
 import { log } from '../libs/logger';
+import { convertCoCoAmountToPayPalAmount } from './converters/amount.converter';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const packageJSON = require('../../package.json');
 
@@ -327,7 +327,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
     );
     const captureId = transaction?.interactionId;
     if (this.isPartialRefund(request)) {
-      const data = await this.paypalClient.refundPartialPayment(captureId, request.amount);
+      const data = await this.paypalClient.refundPartialPayment(captureId, request.amount, request.payment);
       return {
         outcome:
           data.status === OrderStatus.COMPLETED
@@ -379,6 +379,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
     payload: CreateOrderRequestDTO,
   ): CreateOrderRequest {
     const futureOrderNumber = getFutureOrderNumberFromContext();
+
     return {
       ...payload,
       purchase_units: [
@@ -387,7 +388,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
           invoice_id: payment.id,
           amount: {
             currency_code: amount.currencyCode,
-            value: parseAmount(amount.centAmount),
+            value: convertCoCoAmountToPayPalAmount(amount, payment.amountPlanned.fractionDigits),
           },
           shipping: this.convertShippingAddress(cart.shippingAddress),
           ...(futureOrderNumber && { custom_id: futureOrderNumber }),

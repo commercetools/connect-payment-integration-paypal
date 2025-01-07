@@ -151,10 +151,3 @@ export type RefundResponse = {
 export type NotificationVerificationResponse = {
   verification_status: VerificationStatus;
 };
-
-export const parseAmount = (amountInCents: number): string => {
-  const amount = Math.floor(amountInCents / 100);
-  const cents = amountInCents % 100;
-
-  return `${amount}.${cents.toString().padStart(2, '0')}`;
-};
