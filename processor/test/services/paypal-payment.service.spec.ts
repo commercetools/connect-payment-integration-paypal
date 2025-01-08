@@ -251,7 +251,7 @@ describe('paypal-payment.service', () => {
         event_type: 'PAYMENT.CAPTURE.COMPLETED',
         resource: {
           amount: {
-            currency_code: 'GBR',
+            currency_code: 'GBP',
             value: '120.45',
           },
           id: '2c01bab4-9024-49d1-9d19-39f607977ca0',
@@ -268,7 +268,7 @@ describe('paypal-payment.service', () => {
         transaction: {
           type: 'Charge',
           state: 'Success',
-          amount: { centAmount: 12045, currencyCode: 'GBR' },
+          amount: { centAmount: 12045, currencyCode: 'GBP' },
           interactionId: '2c01bab4-9024-49d1-9d19-39f607977ca0',
         },
       };
