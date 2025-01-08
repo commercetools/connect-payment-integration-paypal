@@ -252,7 +252,7 @@ describe('paypal-payment.service', () => {
         resource: {
           amount: {
             currency_code: 'GBR',
-            value: '120000.00',
+            value: '120.45',
           },
           id: '2c01bab4-9024-49d1-9d19-39f607977ca0',
           invoice_id: paymentId,
@@ -268,7 +268,7 @@ describe('paypal-payment.service', () => {
         transaction: {
           type: 'Charge',
           state: 'Success',
-          amount: { centAmount: 12000000, currencyCode: 'GBR' },
+          amount: { centAmount: 12045, currencyCode: 'GBR' },
           interactionId: '2c01bab4-9024-49d1-9d19-39f607977ca0',
         },
       };
