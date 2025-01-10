@@ -332,7 +332,11 @@ export class PaypalPaymentService extends AbstractPaymentService {
     );
     const captureId = transaction?.interactionId;
     if (this.isPartialRefund(request)) {
-      const data = await this.paypalClient.refundPartialPayment(captureId, request.amount, request.payment);
+      const data = await this.paypalClient.refundPartialPayment(
+        captureId,
+        request.amount,
+        request.payment.amountPlanned.fractionDigits,
+      );
       return {
         outcome:
           data.status === OrderStatus.COMPLETED
