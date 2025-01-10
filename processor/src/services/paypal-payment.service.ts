@@ -51,17 +51,20 @@ import { AbstractPaymentService } from './abstract-payment.service';
 import { NotificationConverter } from './converters/notification.converter';
 import { log } from '../libs/logger';
 import { convertCoCoAmountToPayPalAmount } from './converters/amount.converter';
+import { PartialRefundConverter } from './converters/partial-refund.converter';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const packageJSON = require('../../package.json');
 
 export class PaypalPaymentService extends AbstractPaymentService {
   private paypalClient: PaypalAPI;
   private notificationConverter: NotificationConverter;
+  private partialRefundConverter: PartialRefundConverter;
 
   constructor(opts: PaypalPaymentServiceOptions) {
     super(opts.ctCartService, opts.ctPaymentService);
     this.paypalClient = new PaypalAPI();
     this.notificationConverter = new NotificationConverter();
+    this.partialRefundConverter = new PartialRefundConverter();
   }
 
   /**
@@ -332,11 +335,8 @@ export class PaypalPaymentService extends AbstractPaymentService {
     );
     const captureId = transaction?.interactionId;
     if (this.isPartialRefund(request)) {
-      const data = await this.paypalClient.refundPartialPayment(
-        captureId,
-        request.amount,
-        request.payment.amountPlanned.fractionDigits,
-      );
+      const paypalPartialRefundPayload = this.partialRefundConverter.convert(request);
+      const data = await this.paypalClient.refundPartialPayment(captureId, paypalPartialRefundPayload);
       return {
         outcome:
           data.status === OrderStatus.COMPLETED

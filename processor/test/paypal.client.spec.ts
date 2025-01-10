@@ -14,6 +14,7 @@ import { setupServer } from 'msw/node';
 import { PaypalAPI } from '../src/clients/paypal.client';
 import { mockPaypalGetRequest, mockPaypalRequest } from './utils/paypal-request.mock';
 import { OrderStatus, PaypalBasePath, PaypalUrls } from '../src/clients/types/paypal.client.type';
+import { PartialRefundPayload } from '../src/services/converters/partial-refund.converter';
 
 describe('Paypal API', () => {
   const api = new PaypalAPI();
@@ -182,23 +183,23 @@ describe('Paypal API', () => {
       const url = PaypalUrls.ORDERS_REFUND.replace(/{resourceId}/g, captureId);
       mockServer.use(
         mockPaypalRequest(PaypalBasePath.TEST, `${PaypalUrls.AUTHENTICATION}`, 200, paypalAuthenticationResponse),
-
         mockPaypalRequest(PaypalBasePath.TEST, url, 200, paypalRefundOkResponse),
       );
 
-      // when
-      const result = await api.refundPartialPayment(
-        captureId,
-        {
-          currencyCode: 'EUR',
-          centAmount: 3000,
+      const requestPayload: PartialRefundPayload = {
+        amount: {
+          currency_code: 'USD',
+          value: '10.00',
         },
-        2,
-      );
+      };
+
+      // when
+      const result = await api.refundPartialPayment(captureId, requestPayload);
 
       // then
       expect(result.status).toBe(OrderStatus.COMPLETED);
       expect(result.id).toBe(paypalRefundOkResponse.id);
+      expect(result.amount).toEqual({ value: '10.00', currency_code: 'USD' });
     });
 
     it('should perform a full refund on the captured order', async () => {
