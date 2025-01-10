@@ -18,6 +18,7 @@ const mockChargePaymentTransaction: Transaction = {
 export const mockGetPaymentAmount: PaymentAmount = {
   centAmount: 150000,
   currencyCode: 'USD',
+  fractionDigits: 2,
 };
 
 export const mockGetPaymentResult: Payment = {

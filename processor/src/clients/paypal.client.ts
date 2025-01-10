@@ -1,6 +1,6 @@
 import { config } from '../config/config';
-import { AmountSchemaDTO } from '../dtos/operations/payment-intents.dto';
 import { PaypalApiError } from '../errors/paypal-api.error';
+import { PartialRefundPayload } from '../services/converters/partial-refund.converter';
 import {
   AuthenticationResponse,
   CaptureOrderResponse,
@@ -13,9 +13,8 @@ import {
   PaypalBasePath,
   PaypalUrls,
   RefundResponse,
-  parseAmount,
 } from './types/paypal.client.type';
-import { ErrorGeneral, Money } from '@commercetools/connect-payments-sdk';
+import { ErrorGeneral } from '@commercetools/connect-payments-sdk';
 import { randomUUID } from 'crypto';
 
 export class PaypalAPI implements IPaypalPaymentAPI {
@@ -215,11 +214,9 @@ export class PaypalAPI implements IPaypalPaymentAPI {
 
   public async refundPartialPayment(
     paymentReference: string | undefined,
-    payload: AmountSchemaDTO, // amount should be converted before sent, create a static method for converting amount in this class, to be used by any service needing it PAYPALAPI.convert_amount
+    payload: PartialRefundPayload,
   ): Promise<RefundResponse> {
     const url = this.buildResourceUrl(config.paypalEnvironment, PaypalUrls.ORDERS_REFUND, paymentReference);
-
-    const paypalAmount = this.convertToPaypalAmount(payload);
 
     const auth = await this.authenticateRequest();
     const options = {
@@ -230,7 +227,7 @@ export class PaypalAPI implements IPaypalPaymentAPI {
         'PayPal-Partner-Attribution-Id': 'commercetools_Cart_Checkout',
         Authorization: `Bearer ${auth.accessToken}`,
       },
-      body: JSON.stringify(paypalAmount),
+      body: JSON.stringify(payload),
     };
 
     try {
@@ -435,14 +432,5 @@ export class PaypalAPI implements IPaypalPaymentAPI {
         privateMessage: 'Failed due to network error',
       });
     }
-  }
-
-  private convertToPaypalAmount(amount: Money) {
-    return {
-      amount: {
-        currency_code: amount.currencyCode,
-        value: parseAmount(amount.centAmount),
-      },
-    };
   }
 }

@@ -12,6 +12,7 @@
     "dev": "ts-node src/main.ts",
     "watch": "nodemon --watch \"src/**\" --ext \"ts,json\" --ignore \"src/**/*.spec.ts\" --exec \"ts-node src/main.ts\"",
     "test": "jest --detectOpenHandles",
+    "test:watch": "jest --watch --detectOpenHandles",
     "connector:post-deploy": "node dist/connectors/post-deploy.js",
     "connector:pre-undeploy": "node dist/connectors/pre-undeploy.js"
   },
@@ -20,7 +21,7 @@
   "license": "ISC",
   "dependencies": {
     "@commercetools-backend/loggers": "22.37.0",
-    "@commercetools/connect-payments-sdk": "0.13.1",
+    "@commercetools/connect-payments-sdk": "0.14.0",
     "@fastify/autoload": "6.0.3",
     "@fastify/cors": "10.0.2",
     "@fastify/formbody": "8.0.1",

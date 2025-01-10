@@ -7,7 +7,6 @@ import { DefaultCartService } from '@commercetools/connect-payments-sdk/dist/com
 import { mockGetPaymentAmount, mockGetPaymentResult, mockUpdatePaymentResult } from '../utils/mock-payment-data';
 import * as Config from '../../src/config/config';
 import { PaypalPaymentServiceOptions } from '../../src/services/types/paypal-payment.type';
-import { AbstractPaymentService } from '../../src/services/abstract-payment.service';
 import { PaypalPaymentService } from '../../src/services/paypal-payment.service';
 import { setupServer } from 'msw/node';
 import { PaypalUrls, PaypalBasePath } from '../../src/clients/types/paypal.client.type';
@@ -19,10 +18,10 @@ import {
 } from '../utils/mock-paypal-response-data';
 import { mockPaypalGetRequest, mockPaypalRequest } from '../utils/paypal-request.mock';
 import { mockGetCartResult } from '../utils/mock-cart-data';
-import { HealthCheckResult } from '@commercetools/connect-payments-sdk';
+import { HealthCheckResult, Payment } from '@commercetools/connect-payments-sdk';
 import * as StatusHandler from '@commercetools/connect-payments-sdk/dist/api/handlers/status.handler';
 import * as FastifyContext from '../../src/libs/fastify/context/context';
-import { CreateOrderRequestDTO, Intent } from '../../src/dtos/paypal-payment.dto';
+import { CreateOrderRequestDTO, Intent, NotificationPayloadDTO } from '../../src/dtos/paypal-payment.dto';
 
 interface FlexibleConfig {
   [key: string]: string | number | undefined; // Adjust the type according to your config values
@@ -44,7 +43,7 @@ describe('paypal-payment.service', () => {
     ctCartService: paymentSDK.ctCartService,
     ctPaymentService: paymentSDK.ctPaymentService,
   };
-  const paymentService: AbstractPaymentService = new PaypalPaymentService(opts);
+  const paymentService: PaypalPaymentService = new PaypalPaymentService(opts);
 
   beforeAll(() => {
     mockServer.listen({
@@ -230,6 +229,53 @@ describe('paypal-payment.service', () => {
 
       const result = await paymentService.modifyPayment(modifyPaymentOpts);
       expect(result?.outcome).toStrictEqual('approved');
+    });
+  });
+
+  describe('notifications', () => {
+    test('should process a notification', async () => {
+      // Given
+      mockServer.use(
+        mockPaypalRequest(PaypalBasePath.TEST, `${PaypalUrls.AUTHENTICATION}`, 200, paypalAuthenticationResponse),
+      );
+
+      jest.spyOn(DefaultPaymentService.prototype, 'getPayment').mockResolvedValueOnce(mockGetPaymentResult);
+      jest.spyOn(DefaultPaymentService.prototype, 'updatePayment').mockImplementationOnce(async () => {
+        return {} as Payment;
+      });
+
+      const paymentId = mockGetPaymentResult.id;
+
+      const payPalNotification: NotificationPayloadDTO = {
+        id: '704dc79f-ac61-47da-9f84-3cc4ca495210',
+        event_type: 'PAYMENT.CAPTURE.COMPLETED',
+        resource: {
+          amount: {
+            currency_code: 'GBP',
+            value: '120.45',
+          },
+          id: '2c01bab4-9024-49d1-9d19-39f607977ca0',
+          invoice_id: paymentId,
+          status: '',
+        },
+        resource_type: '',
+      };
+
+      await paymentService.processNotification({ data: payPalNotification });
+
+      const expectedPayloadToUpdatePayment = {
+        id: '123456',
+        transaction: {
+          type: 'Charge',
+          state: 'Success',
+          amount: { centAmount: 12045, currencyCode: 'GBP' },
+          interactionId: '2c01bab4-9024-49d1-9d19-39f607977ca0',
+        },
+      };
+
+      expect(jest.spyOn(DefaultPaymentService.prototype, 'updatePayment')).toHaveBeenCalledWith(
+        expectedPayloadToUpdatePayment,
+      );
     });
   });
 });

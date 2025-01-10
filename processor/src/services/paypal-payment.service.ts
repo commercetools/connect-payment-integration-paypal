@@ -26,7 +26,6 @@ import {
   CreateOrderRequest,
   OrderStatus,
   PaypalShipping,
-  parseAmount,
 } from '../clients/types/paypal.client.type';
 import { PaymentModificationStatus } from '../dtos/operations/payment-intents.dto';
 import { randomUUID } from 'crypto';
@@ -51,17 +50,21 @@ import { SupportedPaymentComponentsSchemaDTO } from '../dtos/operations/payment-
 import { AbstractPaymentService } from './abstract-payment.service';
 import { NotificationConverter } from './converters/notification.converter';
 import { log } from '../libs/logger';
+import { convertCoCoAmountToPayPalAmount } from './converters/amount.converter';
+import { PartialRefundConverter } from './converters/partial-refund.converter';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const packageJSON = require('../../package.json');
 
 export class PaypalPaymentService extends AbstractPaymentService {
   private paypalClient: PaypalAPI;
   private notificationConverter: NotificationConverter;
+  private partialRefundConverter: PartialRefundConverter;
 
   constructor(opts: PaypalPaymentServiceOptions) {
     super(opts.ctCartService, opts.ctPaymentService);
     this.paypalClient = new PaypalAPI();
     this.notificationConverter = new NotificationConverter();
+    this.partialRefundConverter = new PartialRefundConverter();
   }
 
   /**
@@ -270,7 +273,12 @@ export class PaypalPaymentService extends AbstractPaymentService {
   }
 
   public async processNotification(opts: { data: NotificationPayloadDTO }): Promise<void> {
-    const updateData = this.notificationConverter.convert(opts.data);
+    const paymentId = opts.data.resource.invoice_id;
+    const payment = await this.ctPaymentService.getPayment({
+      id: paymentId,
+    });
+
+    const updateData = this.notificationConverter.convert(opts.data, payment.amountPlanned.fractionDigits);
     await this.ctPaymentService.updatePayment(updateData);
   }
 
@@ -327,7 +335,8 @@ export class PaypalPaymentService extends AbstractPaymentService {
     );
     const captureId = transaction?.interactionId;
     if (this.isPartialRefund(request)) {
-      const data = await this.paypalClient.refundPartialPayment(captureId, request.amount);
+      const paypalPartialRefundPayload = this.partialRefundConverter.convert(request);
+      const data = await this.paypalClient.refundPartialPayment(captureId, paypalPartialRefundPayload);
       return {
         outcome:
           data.status === OrderStatus.COMPLETED
@@ -379,6 +388,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
     payload: CreateOrderRequestDTO,
   ): CreateOrderRequest {
     const futureOrderNumber = getFutureOrderNumberFromContext();
+
     return {
       ...payload,
       purchase_units: [
@@ -387,7 +397,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
           invoice_id: payment.id,
           amount: {
             currency_code: amount.currencyCode,
-            value: parseAmount(amount.centAmount),
+            value: convertCoCoAmountToPayPalAmount(amount, payment.amountPlanned.fractionDigits),
           },
           shipping: this.convertShippingAddress(cart.shippingAddress),
           ...(futureOrderNumber && { custom_id: futureOrderNumber }),
