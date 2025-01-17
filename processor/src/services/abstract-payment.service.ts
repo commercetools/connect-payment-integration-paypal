@@ -138,7 +138,12 @@ export abstract class AbstractPaymentService {
         state: 'Initial',
       },
     });
-    const res = await this.processPaymentModification(updatedPayment, transactionType, requestAmount);
+    const res = await this.processPaymentModification(
+      updatedPayment,
+      transactionType,
+      requestAmount,
+      request.merchantReference,
+    );
 
     await this.ctPaymentService.updatePayment({
       id: ctPayment.id,
@@ -177,16 +182,17 @@ export abstract class AbstractPaymentService {
     payment: Payment,
     transactionType: string,
     requestAmount: AmountSchemaDTO,
+    merchantReference?: string,
   ) {
     switch (transactionType) {
       case 'CancelAuthorization': {
-        return await this.cancelPayment({ payment });
+        return await this.cancelPayment({ payment, merchantReference });
       }
       case 'Charge': {
-        return await this.capturePayment({ amount: requestAmount, payment });
+        return await this.capturePayment({ amount: requestAmount, payment, merchantReference });
       }
       case 'Refund': {
-        return await this.refundPayment({ amount: requestAmount, payment });
+        return await this.refundPayment({ amount: requestAmount, payment, merchantReference });
       }
       default: {
         throw new ErrorInvalidOperation(`Operation ${transactionType} not supported.`);
