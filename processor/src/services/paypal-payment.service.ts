@@ -388,6 +388,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
     payload: CreateOrderRequestDTO,
   ): CreateOrderRequest {
     const futureOrderNumber = getFutureOrderNumberFromContext();
+    const shipingAddress = paymentSDK.ctCartService.getOneShippingAddress({ cart });
 
     return {
       ...payload,
@@ -399,7 +400,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
             currency_code: amount.currencyCode,
             value: convertCoCoAmountToPayPalAmount(amount, payment.amountPlanned.fractionDigits),
           },
-          shipping: this.convertShippingAddress(cart.shippingAddress),
+          shipping: this.convertShippingAddress(shipingAddress),
           ...(futureOrderNumber && { custom_id: futureOrderNumber }),
         },
       ],
