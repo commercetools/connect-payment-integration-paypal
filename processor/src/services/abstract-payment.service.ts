@@ -16,6 +16,7 @@ import {
 
 import { SupportedPaymentComponentsSchemaDTO } from '../dtos/operations/payment-componets.dto';
 import { log } from '../libs/logger';
+import { PaymentIntentResponseSchemaDTO } from '../dtos/operations/payment-intents.dto';
 
 export abstract class AbstractPaymentService {
   protected ctCartService: CommercetoolsCartService;
@@ -121,7 +122,7 @@ export abstract class AbstractPaymentService {
    * @param opts - input for payment modification including payment ID, action and payment amount
    * @returns Promise with outcome of payment modification after invocation to PSPs
    */
-  public async modifyPayment(opts: ModifyPayment): Promise<PaymentProviderModificationResponse> {
+  public async modifyPayment(opts: ModifyPayment): Promise<PaymentIntentResponseSchemaDTO> {
     const ctPayment = await this.ctPaymentService.getPayment({
       id: opts.paymentId,
     });

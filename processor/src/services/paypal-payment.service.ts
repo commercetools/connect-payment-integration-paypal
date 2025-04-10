@@ -34,7 +34,6 @@ import { randomUUID } from 'crypto';
 import {
   TransactionStates,
   OrderConfirmation,
-  PaymentOutcome,
   PaypalPaymentServiceOptions,
   TransactionTypes,
 } from './types/paypal-payment.type';
@@ -295,14 +294,25 @@ export class PaypalPaymentService extends AbstractPaymentService {
    * @returns Promise with mocking data containing operation status and PSP reference
    */
   async capturePayment(request: CapturePaymentRequest): Promise<PaymentProviderModificationResponse> {
-    const data = await this.paypalClient.captureOrder(request.payment.interfaceId);
-    const response = this.convertCaptureOrderResponse(data, request.payment.id);
+    log.info(`Processing payment modification.`, {
+      paymentId: request.payment.id,
+      action: 'capturePayment',
+    });
 
-    return {
-      outcome:
-        data.status === OrderStatus.COMPLETED ? PaymentModificationStatus.APPROVED : PaymentModificationStatus.REJECTED,
-      pspReference: response.id,
-    };
+    const response = await this.processPaymentModificationInternal({
+      request,
+      transactionType: TransactionTypes.CHARGE,
+      paypalOperation: 'capture',
+      amount: request.amount,
+    });
+
+    log.info(`Payment modification completed.`, {
+      paymentId: request.payment.id,
+      action: 'capturePayment',
+      result: response.outcome,
+    });
+
+    return response;
   }
 
   /**
@@ -333,12 +343,25 @@ export class PaypalPaymentService extends AbstractPaymentService {
    * @returns Promise with mocking data containing operation status and PSP reference
    */
   async refundPayment(request: RefundPaymentRequest): Promise<PaymentProviderModificationResponse> {
-    return await this.processPaymentModificationInternal({
+    log.info(`Processing payment modification.`, {
+      paymentId: request.payment.id,
+      action: 'refundPayment',
+    });
+
+    const response = await this.processPaymentModificationInternal({
       request,
-      transactionType: 'Refund',
+      transactionType: TransactionTypes.REFUND,
       paypalOperation: 'refund',
       amount: request.amount,
     });
+
+    log.info(`Payment modification completed.`, {
+      paymentId: request.payment.id,
+      action: 'refundPayment',
+      result: response.outcome,
+    });
+
+    return response;
   }
 
   /**
@@ -351,11 +374,24 @@ export class PaypalPaymentService extends AbstractPaymentService {
    * @returns Promise with mocking data containing operation status and PSP reference
    */
   async reversePayment(request: ReversePaymentRequest): Promise<PaymentProviderModificationResponse> {
-    return await this.refundPayment({
+    log.info(`Processing payment modification.`, {
+      paymentId: request.payment.id,
+      action: 'reversePayment',
+    });
+
+    const response = await this.refundPayment({
       amount: request.payment.amountPlanned,
       merchantReference: request.merchantReference,
       payment: request.payment,
     });
+
+    log.info(`Payment modification completed.`, {
+      paymentId: request.payment.id,
+      action: 'reversePayment',
+      result: response.outcome,
+    });
+
+    return response;
   }
 
   private async processPaymentModificationInternal(opts: {
@@ -370,19 +406,23 @@ export class PaypalPaymentService extends AbstractPaymentService {
       transaction: {
         type: transactionType,
         amount,
-        state: 'Initial',
+        state: TransactionStates.INITIAL,
       },
     });
 
     const response = await this.makeCallToPaypalInternal(paypalOperation, request);
 
+    // TODO: right now paypal doesn't return the amount processed in the request, I am not sure why
+    // IN a situation the merchants tries a refund twice, the first time using partial and the second time as a full refund, paypal refunds whats left from after the first refund
+    // In our transaction object, if we do not update the amount from paypal, we end up creating a transaction with the full amount in the second refund attempt, even though that's
+    // not what the merchant would have expected, and creating discrepancy between what we have in coco and what the merchant sees in paypal
     await this.ctPaymentService.updatePayment({
       id: request.payment.id,
       transaction: {
         type: transactionType,
         amount,
         interactionId: response.id,
-        state: response.status === OrderStatus.COMPLETED ? 'Success' : 'Failure',
+        state: response.status === OrderStatus.COMPLETED ? TransactionStates.SUCCESS : TransactionStates.FAILURE,
       },
     });
 
@@ -445,17 +485,6 @@ export class PaypalPaymentService extends AbstractPaymentService {
     }
   }
 
-  private convertPaymentResultCode(resultCode: PaymentOutcome): string {
-    switch (resultCode) {
-      case PaymentOutcome.AUTHORIZED:
-        return TransactionStates.SUCCESS;
-      case PaymentOutcome.REJECTED:
-        return TransactionStates.FAILURE;
-      default:
-        return TransactionStates.INITIAL;
-    }
-  }
-
   private convertCreatePaymentIntentRequest(
     cart: Cart,
     payment: Payment,
@@ -463,7 +492,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
     payload: CreateOrderRequestDTO,
   ): CreateOrderRequest {
     const futureOrderNumber = getFutureOrderNumberFromContext();
-    const shipingAddress = paymentSDK.ctCartService.getOneShippingAddress({ cart });
+    const shippingAddress = paymentSDK.ctCartService.getOneShippingAddress({ cart });
 
     return {
       ...payload,
@@ -475,7 +504,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
             currency_code: amount.currencyCode,
             value: convertCoCoAmountToPayPalAmount(amount, payment.amountPlanned.fractionDigits),
           },
-          shipping: this.convertShippingAddress(shipingAddress),
+          shipping: this.convertShippingAddress(shippingAddress),
           ...(futureOrderNumber && { custom_id: futureOrderNumber }),
         },
       ],
@@ -559,19 +588,4 @@ export class PaypalPaymentService extends AbstractPaymentService {
       });
     }
   }
-
-  // private convertCaptureOrderStatus(data: any): PaymentModificationStatus {
-  //   if (data?.status) {
-  //     const result = data.status as string;
-  //     if (result.toUpperCase() === 'COMPLETED') {
-  //       return PaymentModificationStatus.APPROVED;
-  //     } else {
-  //       return PaymentModificationStatus.REJECTED;
-  //     }
-  //   } else {
-  //     throw new ErrorGeneral(undefined, {
-  //       privateMessage: 'capture status not received.',
-  //     });
-  //   }
-  // }
 }

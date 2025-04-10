@@ -62,7 +62,6 @@ const PaymentModificationSchema = Type.Enum(PaymentModificationStatus);
 
 export const PaymentIntentResponseSchema = Type.Object({
   outcome: PaymentModificationSchema,
-  paymentReference: Type.String(),
 });
 
 export type PaymentIntentRequestSchemaDTO = Static<typeof PaymentIntentRequestSchema>;
