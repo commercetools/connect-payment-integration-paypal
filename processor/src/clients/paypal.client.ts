@@ -332,6 +332,7 @@ export class PaypalAPI implements IPaypalPaymentAPI {
     };
 
     try {
+      console.log(url);
       const res = await fetch(url, options);
       if (!res.ok) {
         const error = await res.json().catch(() => ({})); // Graceful handling if JSON parsing fails
