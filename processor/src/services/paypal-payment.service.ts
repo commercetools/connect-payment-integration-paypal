@@ -52,7 +52,7 @@ import { SupportedPaymentComponentsSchemaDTO } from '../dtos/operations/payment-
 import { AbstractPaymentService } from './abstract-payment.service';
 import { NotificationConverter } from './converters/notification.converter';
 import { log } from '../libs/logger';
-import { convertCoCoAmountToPayPalAmount } from './converters/amount.converter';
+import { convertCoCoAmountToPayPalAmount, convertPayPalAmountToCoCoAmount } from './converters/amount.converter';
 import { PartialRefundConverter } from './converters/partial-refund.converter';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const packageJSON = require('../../package.json');
@@ -401,26 +401,16 @@ export class PaypalPaymentService extends AbstractPaymentService {
     amount: AmountSchemaDTO;
   }): Promise<PaymentProviderModificationResponse> {
     const { request, transactionType, paypalOperation, amount } = opts;
-    await this.ctPaymentService.updatePayment({
-      id: request.payment.id,
-      transaction: {
-        type: transactionType,
-        amount,
-        state: TransactionStates.INITIAL,
-      },
-    });
 
     const response = await this.makeCallToPaypalInternal(paypalOperation, request);
 
-    // TODO: right now paypal doesn't return the amount processed in the request, I am not sure why
-    // IN a situation the merchants tries a refund twice, the first time using partial and the second time as a full refund, paypal refunds whats left from after the first refund
-    // In our transaction object, if we do not update the amount from paypal, we end up creating a transaction with the full amount in the second refund attempt, even though that's
-    // not what the merchant would have expected, and creating discrepancy between what we have in coco and what the merchant sees in paypal
     await this.ctPaymentService.updatePayment({
       id: request.payment.id,
       transaction: {
         type: transactionType,
-        amount,
+        amount: response?.amount
+          ? convertPayPalAmountToCoCoAmount(response.amount, request.payment.amountPlanned.fractionDigits)
+          : amount,
         interactionId: response.id,
         state: response.status === OrderStatus.COMPLETED ? TransactionStates.SUCCESS : TransactionStates.FAILURE,
       },
