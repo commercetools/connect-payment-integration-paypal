@@ -15,6 +15,7 @@ export enum PaypalUrls {
   GET_ORDERS = '/v2/checkout/orders/{resourceId}',
   ORDERS_CAPTURE = '/v2/checkout/orders/{resourceId}/capture',
   ORDERS_REFUND = '/v2/payments/captures/{resourceId}/refund',
+  GET_REFUND = '/v2/payments/refunds/{resourceId}',
   NOTIFICATION_VERIFY = '/v1/notifications/verify-webhook-signature',
 }
 
@@ -130,6 +131,7 @@ export type CaptureOrderResponse = {
   id: string; // order ID
   purchase_units: PurchaseUnits[];
   status: string;
+  amount?: Amount;
 };
 
 export type CreateOrderResponse = {

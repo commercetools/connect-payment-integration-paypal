@@ -22,6 +22,7 @@ import { HealthCheckResult, Payment } from '@commercetools/connect-payments-sdk'
 import * as StatusHandler from '@commercetools/connect-payments-sdk/dist/api/handlers/status.handler';
 import * as FastifyContext from '../../src/libs/fastify/context/context';
 import { CreateOrderRequestDTO, Intent, NotificationPayloadDTO } from '../../src/dtos/paypal-payment.dto';
+import { convertPayPalAmountToCoCoAmount } from '../../src/services/converters/amount.converter';
 
 interface FlexibleConfig {
   [key: string]: string | number | undefined; // Adjust the type according to your config values
@@ -203,10 +204,12 @@ describe('paypal-payment.service', () => {
       // Given
       const orderId = mockUpdatePaymentResult.transactions[0].interactionId as string;
       const url = PaypalUrls.ORDERS_REFUND.replace(/{resourceId}/g, orderId);
+      const refundDetailsURL = PaypalUrls.GET_REFUND.replace(/{resourceId}/g, paypalRefundOkResponse.id);
 
       mockServer.use(
         mockPaypalRequest(PaypalBasePath.TEST, `${PaypalUrls.AUTHENTICATION}`, 200, paypalAuthenticationResponse),
         mockPaypalRequest(PaypalBasePath.TEST, url, 200, paypalRefundOkResponse),
+        mockPaypalGetRequest(PaypalBasePath.TEST, refundDetailsURL, 200, paypalRefundOkResponse),
       );
 
       const modifyPaymentOpts: ModifyPayment = {
@@ -229,6 +232,45 @@ describe('paypal-payment.service', () => {
 
       const result = await paymentService.modifyPayment(modifyPaymentOpts);
       expect(result?.outcome).toStrictEqual('approved');
+    });
+
+    test('revertPayment', async () => {
+      // Given
+      const orderId = mockUpdatePaymentResult.transactions[0].interactionId as string;
+      const url = PaypalUrls.ORDERS_REFUND.replace(/{resourceId}/g, orderId);
+      const refundDetailsURL = PaypalUrls.GET_REFUND.replace(/{resourceId}/g, paypalRefundOkResponse.id);
+
+      mockServer.use(
+        mockPaypalRequest(PaypalBasePath.TEST, `${PaypalUrls.AUTHENTICATION}`, 200, paypalAuthenticationResponse),
+        mockPaypalRequest(PaypalBasePath.TEST, url, 200, paypalRefundOkResponse),
+        mockPaypalGetRequest(PaypalBasePath.TEST, refundDetailsURL, 200, paypalRefundOkResponse),
+      );
+
+      const modifyPaymentOpts: ModifyPayment = {
+        paymentId: 'dummy-paymentId',
+        data: {
+          actions: [
+            {
+              action: 'reversePayment',
+            },
+          ],
+        },
+      };
+
+      jest.spyOn(DefaultPaymentService.prototype, 'getPayment').mockResolvedValue(mockGetPaymentResult);
+      jest.spyOn(DefaultPaymentService.prototype, 'updatePayment').mockResolvedValue(mockUpdatePaymentResult);
+
+      const result = await paymentService.modifyPayment(modifyPaymentOpts);
+      expect(result?.outcome).toStrictEqual('approved');
+      expect(DefaultPaymentService.prototype.updatePayment).toHaveBeenCalledWith({
+        id: '123456',
+        transaction: {
+          amount: convertPayPalAmountToCoCoAmount(paypalRefundOkResponse.amount, 2),
+          interactionId: paypalRefundOkResponse.id,
+          state: 'Success',
+          type: 'Refund',
+        },
+      });
     });
   });
 

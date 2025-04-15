@@ -181,9 +181,12 @@ describe('Paypal API', () => {
     it('should perform a partial refund on the captured order', async () => {
       const captureId = paypalCaptureOrderOkResponse.purchase_units[0].payments.captures[0].id;
       const url = PaypalUrls.ORDERS_REFUND.replace(/{resourceId}/g, captureId);
+      const refundDetailsURL = PaypalUrls.GET_REFUND.replace(/{resourceId}/g, paypalRefundOkResponse.id);
+
       mockServer.use(
         mockPaypalRequest(PaypalBasePath.TEST, `${PaypalUrls.AUTHENTICATION}`, 200, paypalAuthenticationResponse),
         mockPaypalRequest(PaypalBasePath.TEST, url, 200, paypalRefundOkResponse),
+        mockPaypalGetRequest(PaypalBasePath.TEST, refundDetailsURL, 200, paypalRefundOkResponse),
       );
 
       const requestPayload: PartialRefundPayload = {
@@ -205,9 +208,12 @@ describe('Paypal API', () => {
     it('should perform a full refund on the captured order', async () => {
       const captureId = paypalCaptureOrderOkResponse.purchase_units[0].payments.captures[0].id;
       const url = PaypalUrls.ORDERS_REFUND.replace(/{resourceId}/g, captureId);
+      const refundDetailsURL = PaypalUrls.GET_REFUND.replace(/{resourceId}/g, paypalRefundOkResponse.id);
+
       mockServer.use(
         mockPaypalRequest(PaypalBasePath.TEST, `${PaypalUrls.AUTHENTICATION}`, 200, paypalAuthenticationResponse),
         mockPaypalRequest(PaypalBasePath.TEST, url, 200, paypalRefundOkResponse),
+        mockPaypalGetRequest(PaypalBasePath.TEST, refundDetailsURL, 200, paypalRefundOkResponse),
       );
 
       // when
