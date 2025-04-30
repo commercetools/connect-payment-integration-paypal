@@ -1,9 +1,7 @@
 import {
   CommercetoolsCartService,
   CommercetoolsPaymentService,
-  ErrorInvalidJsonInput,
   ErrorInvalidOperation,
-  Payment,
 } from '@commercetools/connect-payments-sdk';
 import {
   CancelPaymentRequest,
@@ -12,15 +10,13 @@ import {
   ModifyPayment,
   PaymentProviderModificationResponse,
   RefundPaymentRequest,
+  ReversePaymentRequest,
   StatusResponse,
 } from './types/operation.type';
-import {
-  AmountSchemaDTO,
-  PaymentIntentResponseSchemaDTO,
-  PaymentModificationStatus,
-} from '../dtos/operations/payment-intents.dto';
 
 import { SupportedPaymentComponentsSchemaDTO } from '../dtos/operations/payment-componets.dto';
+import { log } from '../libs/logger';
+import { PaymentIntentResponseSchemaDTO } from '../dtos/operations/payment-intents.dto';
 
 export abstract class AbstractPaymentService {
   protected ctCartService: CommercetoolsCartService;
@@ -107,6 +103,17 @@ export abstract class AbstractPaymentService {
   abstract refundPayment(request: RefundPaymentRequest): Promise<PaymentProviderModificationResponse>;
 
   /**
+   * Reverse payment
+   *
+   * @remarks
+   * Abstract method to execute payment reversals in support of automated reversals to be triggered by checkout api. The actual invocation to PSPs should be implemented in subclasses
+   *
+   * @param request
+   * @returns Promise with outcome containing operation status and PSP reference
+   */
+  abstract reversePayment(request: ReversePaymentRequest): Promise<PaymentProviderModificationResponse>;
+
+  /**
    * Modify payment
    *
    * @remarks
@@ -122,81 +129,67 @@ export abstract class AbstractPaymentService {
 
     const request = opts.data.actions[0];
 
-    let requestAmount!: AmountSchemaDTO;
-    if (request.action != 'cancelPayment') {
-      requestAmount = request.amount;
-    } else {
-      requestAmount = ctPayment.amountPlanned;
-    }
-
-    const transactionType = this.getPaymentTransactionType(request.action);
-    const updatedPayment = await this.ctPaymentService.updatePayment({
-      id: ctPayment.id,
-      transaction: {
-        type: transactionType,
-        amount: requestAmount,
-        state: 'Initial',
-      },
-    });
-    const res = await this.processPaymentModification(
-      updatedPayment,
-      transactionType,
-      requestAmount,
-      request.merchantReference,
-    );
-
-    await this.ctPaymentService.updatePayment({
-      id: ctPayment.id,
-      transaction: {
-        type: transactionType,
-        amount: requestAmount,
-        interactionId: res.pspReference,
-        state: res.outcome === PaymentModificationStatus.APPROVED ? 'Success' : 'Failure',
-      },
-    });
-
-    return {
-      outcome: res.outcome,
-      paymentReference: ctPayment.id,
-    };
-  }
-
-  protected getPaymentTransactionType(action: string): string {
-    switch (action) {
+    switch (request.action) {
       case 'cancelPayment': {
-        return 'CancelAuthorization';
+        return await this.cancelPayment({
+          payment: ctPayment,
+          merchantReference: request.merchantReference,
+        });
       }
       case 'capturePayment': {
-        return 'Charge';
+        return await this.capturePayment({
+          payment: ctPayment,
+          merchantReference: request.merchantReference,
+          amount: request.amount,
+        });
       }
       case 'refundPayment': {
-        return 'Refund';
+        return await this.refundPayment({
+          amount: request.amount,
+          payment: ctPayment,
+          merchantReference: request.merchantReference,
+        });
+      }
+      case 'reversePayment': {
+        return await this.reversePayment({
+          payment: ctPayment,
+          merchantReference: request.merchantReference,
+        });
       }
       default: {
-        throw new ErrorInvalidJsonInput(`Request body does not contain valid JSON.`);
+        log.error(`Operation not supported when modifying payment.`);
+        throw new ErrorInvalidOperation(`Operation not supported.`);
       }
     }
-  }
 
-  protected async processPaymentModification(
-    payment: Payment,
-    transactionType: string,
-    requestAmount: AmountSchemaDTO,
-    merchantReference?: string,
-  ) {
-    switch (transactionType) {
-      case 'CancelAuthorization': {
-        return await this.cancelPayment({ payment, merchantReference });
-      }
-      case 'Charge': {
-        return await this.capturePayment({ amount: requestAmount, payment, merchantReference });
-      }
-      case 'Refund': {
-        return await this.refundPayment({ amount: requestAmount, payment, merchantReference });
-      }
-      default: {
-        throw new ErrorInvalidOperation(`Operation ${transactionType} not supported.`);
-      }
-    }
+    // const updatedPayment = await this.ctPaymentService.updatePayment({
+    //   id: ctPayment.id,
+    //   transaction: {
+    //     type: transactionType,
+    //     amount: requestAmount,
+    //     state: 'Initial',
+    //   },
+    // });
+    // const res = await this.processPaymentModification(
+    //   updatedPayment,
+    //   transactionType,
+    //   requestAmount,
+    //   request.merchantReference,
+    // );
+
+    // await this.ctPaymentService.updatePayment({
+    //   id: ctPayment.id,
+    //   transaction: {
+    //     type: transactionType,
+    //     amount: requestAmount,
+    //     interactionId: res.pspReference,
+    //     state: res.outcome === PaymentModificationStatus.APPROVED ? 'Success' : 'Failure',
+    //   },
+    // });
+
+    // return {
+    //   outcome: res.outcome,
+    //   paymentReference: ctPayment.id,
+    // };
   }
 }

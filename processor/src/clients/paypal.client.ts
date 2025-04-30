@@ -91,13 +91,13 @@ export class PaypalAPI implements IPaypalPaymentAPI {
         });
       }
 
-      const data = await res.json().catch(() => {
+      const data: GetOrderResponse = await res.json().catch(() => {
         throw new ErrorGeneral(undefined, {
           privateMessage: 'Failed to parse response JSON',
         });
       });
 
-      return data as GetOrderResponse;
+      return data;
     } catch (e) {
       if (e instanceof PaypalApiError) {
         throw e;
@@ -142,13 +142,13 @@ export class PaypalAPI implements IPaypalPaymentAPI {
         });
       }
 
-      const data = await res.json().catch(() => {
+      const data: CreateOrderResponse = await res.json().catch(() => {
         throw new ErrorGeneral(undefined, {
           privateMessage: 'Failed to parse response JSON',
         });
       });
 
-      return data as CreateOrderResponse;
+      return data;
     } catch (e) {
       if (e instanceof PaypalApiError) {
         throw e;
@@ -193,13 +193,13 @@ export class PaypalAPI implements IPaypalPaymentAPI {
         });
       }
 
-      const data = await res.json().catch(() => {
+      const data: CaptureOrderResponse = await res.json().catch(() => {
         throw new ErrorGeneral(undefined, {
           privateMessage: 'Failed to parse response JSON',
         });
       });
 
-      return data as CaptureOrderResponse;
+      return data;
     } catch (e) {
       if (e instanceof PaypalApiError) {
         throw e;
@@ -248,13 +248,13 @@ export class PaypalAPI implements IPaypalPaymentAPI {
         });
       }
 
-      const data = await res.json().catch(() => {
+      const data: RefundResponse = await res.json().catch(() => {
         throw new ErrorGeneral(undefined, {
           privateMessage: 'Failed to parse response JSON',
         });
       });
 
-      return data as RefundResponse;
+      return await this.getRefund(data.id);
     } catch (e) {
       if (e instanceof PaypalApiError) {
         throw e;
@@ -299,13 +299,63 @@ export class PaypalAPI implements IPaypalPaymentAPI {
         });
       }
 
-      const data = await res.json().catch(() => {
+      const data: RefundResponse = await res.json().catch(() => {
         throw new ErrorGeneral(undefined, {
           privateMessage: 'Failed to parse response JSON',
         });
       });
 
-      return data as RefundResponse;
+      return await this.getRefund(data.id);
+    } catch (e) {
+      if (e instanceof PaypalApiError) {
+        throw e;
+      }
+
+      throw new ErrorGeneral(undefined, {
+        privateMessage: 'Failed due to network error or internal computations',
+        cause: e,
+      });
+    }
+  }
+
+  public async getRefund(id: string): Promise<RefundResponse> {
+    const url = this.buildResourceUrl(config.paypalEnvironment, PaypalUrls.GET_REFUND, id);
+    const auth = await this.authenticateRequest();
+    const options = {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'PayPal-Request-Id': randomUUID(), // required for idempotency BY PAYPAL
+        'PayPal-Partner-Attribution-Id': 'commercetools_Cart_Checkout',
+        Authorization: `Bearer ${auth.accessToken}`,
+      },
+    };
+
+    try {
+      const res = await fetch(url, options);
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({})); // Graceful handling if JSON parsing fails
+        const errorData = {
+          status: res.status,
+          name: error.name,
+          message: error.message,
+        };
+
+        throw new PaypalApiError(errorData, {
+          fields: {
+            details: error.details,
+            debug_id: error.debug_id || res.headers.get('paypal-debug-id'),
+          },
+        });
+      }
+
+      const data: RefundResponse = await res.json().catch(() => {
+        throw new ErrorGeneral(undefined, {
+          privateMessage: 'Failed to parse response JSON',
+        });
+      });
+
+      return data;
     } catch (e) {
       if (e instanceof PaypalApiError) {
         throw e;

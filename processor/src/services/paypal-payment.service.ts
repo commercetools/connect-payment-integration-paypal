@@ -6,6 +6,7 @@ import {
   Cart,
   Money,
   Payment,
+  ErrorInvalidOperation,
 } from '@commercetools/connect-payments-sdk';
 import {
   CreateOrderRequestDTO,
@@ -26,13 +27,13 @@ import {
   CreateOrderRequest,
   OrderStatus,
   PaypalShipping,
+  RefundResponse,
 } from '../clients/types/paypal.client.type';
-import { PaymentModificationStatus } from '../dtos/operations/payment-intents.dto';
+import { AmountSchemaDTO, PaymentModificationStatus } from '../dtos/operations/payment-intents.dto';
 import { randomUUID } from 'crypto';
 import {
   TransactionStates,
   OrderConfirmation,
-  PaymentOutcome,
   PaypalPaymentServiceOptions,
   TransactionTypes,
 } from './types/paypal-payment.type';
@@ -43,6 +44,7 @@ import {
   ConfigResponse,
   PaymentProviderModificationResponse,
   RefundPaymentRequest,
+  ReversePaymentRequest,
   StatusResponse,
 } from './types/operation.type';
 import { paymentSDK } from '../payment-sdk';
@@ -50,7 +52,7 @@ import { SupportedPaymentComponentsSchemaDTO } from '../dtos/operations/payment-
 import { AbstractPaymentService } from './abstract-payment.service';
 import { NotificationConverter } from './converters/notification.converter';
 import { log } from '../libs/logger';
-import { convertCoCoAmountToPayPalAmount } from './converters/amount.converter';
+import { convertCoCoAmountToPayPalAmount, convertPayPalAmountToCoCoAmount } from './converters/amount.converter';
 import { PartialRefundConverter } from './converters/partial-refund.converter';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const packageJSON = require('../../package.json');
@@ -292,14 +294,25 @@ export class PaypalPaymentService extends AbstractPaymentService {
    * @returns Promise with mocking data containing operation status and PSP reference
    */
   async capturePayment(request: CapturePaymentRequest): Promise<PaymentProviderModificationResponse> {
-    const data = await this.paypalClient.captureOrder(request.payment.interfaceId);
-    const response = this.convertCaptureOrderResponse(data, request.payment.id);
+    log.info(`Processing payment modification.`, {
+      paymentId: request.payment.id,
+      action: 'capturePayment',
+    });
 
-    return {
-      outcome:
-        data.status === OrderStatus.COMPLETED ? PaymentModificationStatus.APPROVED : PaymentModificationStatus.REJECTED,
-      pspReference: response.id,
-    };
+    const response = await this.processPaymentModificationInternal({
+      request,
+      transactionType: TransactionTypes.CHARGE,
+      paypalOperation: 'capture',
+      amount: request.amount,
+    });
+
+    log.info(`Payment modification completed.`, {
+      paymentId: request.payment.id,
+      action: 'capturePayment',
+      result: response.outcome,
+    });
+
+    return response;
   }
 
   /**
@@ -330,28 +343,120 @@ export class PaypalPaymentService extends AbstractPaymentService {
    * @returns Promise with mocking data containing operation status and PSP reference
    */
   async refundPayment(request: RefundPaymentRequest): Promise<PaymentProviderModificationResponse> {
-    const transaction = request.payment.transactions.find(
-      (t) => t.type === TransactionTypes.CHARGE && t.state === TransactionStates.SUCCESS,
-    );
-    const captureId = transaction?.interactionId;
-    if (this.isPartialRefund(request)) {
-      const paypalPartialRefundPayload = this.partialRefundConverter.convert(request);
-      const data = await this.paypalClient.refundPartialPayment(captureId, paypalPartialRefundPayload);
-      return {
-        outcome:
-          data.status === OrderStatus.COMPLETED
-            ? PaymentModificationStatus.APPROVED
-            : PaymentModificationStatus.REJECTED,
-        pspReference: data.id,
-      };
-    }
+    log.info(`Processing payment modification.`, {
+      paymentId: request.payment.id,
+      action: 'refundPayment',
+    });
 
-    const data = await this.paypalClient.refundFullPayment(captureId);
+    const response = await this.processPaymentModificationInternal({
+      request,
+      transactionType: TransactionTypes.REFUND,
+      paypalOperation: 'refund',
+      amount: request.amount,
+    });
+
+    log.info(`Payment modification completed.`, {
+      paymentId: request.payment.id,
+      action: 'refundPayment',
+      result: response.outcome,
+    });
+
+    return response;
+  }
+
+  /**
+   * Reverse payment
+   *
+   * @remarks
+   * Implementation to provide the mocking data for payment refund in external PSPs
+   *
+   * @param request - contains {@link https://docs.commercetools.com/api/projects/payments | Payment } defined in composable commerce
+   * @returns Promise with mocking data containing operation status and PSP reference
+   */
+  async reversePayment(request: ReversePaymentRequest): Promise<PaymentProviderModificationResponse> {
+    log.info(`Processing payment modification.`, {
+      paymentId: request.payment.id,
+      action: 'reversePayment',
+    });
+
+    const response = await this.refundPayment({
+      amount: request.payment.amountPlanned,
+      merchantReference: request.merchantReference,
+      payment: request.payment,
+    });
+
+    log.info(`Payment modification completed.`, {
+      paymentId: request.payment.id,
+      action: 'reversePayment',
+      result: response.outcome,
+    });
+
+    return response;
+  }
+
+  private async processPaymentModificationInternal(opts: {
+    request: CapturePaymentRequest | RefundPaymentRequest;
+    transactionType: 'Charge' | 'Refund';
+    paypalOperation: 'capture' | 'refund';
+    amount: AmountSchemaDTO;
+  }): Promise<PaymentProviderModificationResponse> {
+    const { request, transactionType, paypalOperation, amount } = opts;
+
+    const response = await this.makeCallToPaypalInternal(paypalOperation, request);
+
+    await this.ctPaymentService.updatePayment({
+      id: request.payment.id,
+      transaction: {
+        type: transactionType,
+        amount: response?.amount
+          ? convertPayPalAmountToCoCoAmount(response.amount, request.payment.amountPlanned.fractionDigits)
+          : amount,
+        interactionId: response.id,
+        state: response.status === OrderStatus.COMPLETED ? TransactionStates.SUCCESS : TransactionStates.FAILURE,
+      },
+    });
+
     return {
       outcome:
-        data.status === OrderStatus.COMPLETED ? PaymentModificationStatus.APPROVED : PaymentModificationStatus.REJECTED,
-      pspReference: data.id,
+        response.status === OrderStatus.COMPLETED
+          ? PaymentModificationStatus.APPROVED
+          : PaymentModificationStatus.REJECTED,
+      pspReference: response.id,
     };
+  }
+
+  private async makeCallToPaypalInternal(
+    paypalOperation: 'capture' | 'refund',
+    request: CapturePaymentRequest | RefundPaymentRequest,
+  ): Promise<RefundResponse | CaptureOrderResponse> {
+    switch (paypalOperation) {
+      case 'capture': {
+        const data = await this.paypalClient.captureOrder(request.payment.interfaceId);
+        const response = this.convertCaptureOrderResponse(data, request.payment.id);
+        return {
+          id: response.id,
+          purchase_units: data.purchase_units,
+          status: data.status,
+        } as CaptureOrderResponse;
+      }
+      case 'refund': {
+        const transaction = request.payment.transactions.find(
+          (t) => t.type === TransactionTypes.CHARGE && t.state === TransactionStates.SUCCESS,
+        );
+        const captureId = transaction?.interactionId;
+        if (this.isPartialRefund(request)) {
+          return await this.paypalClient.refundPartialPayment(
+            captureId,
+            this.partialRefundConverter.convert(request as RefundPaymentRequest),
+          );
+        }
+        return await this.paypalClient.refundFullPayment(captureId);
+      }
+      default: {
+        log.error(`makeCallToPaypalInternal: Operation  ${paypalOperation} not supported when modifying payment.`);
+        throw new ErrorInvalidOperation(`Operation not supported.`);
+      }
+    }
   }
 
   private isPartialRefund(request: RefundPaymentRequest): boolean {
@@ -370,17 +475,6 @@ export class PaypalPaymentService extends AbstractPaymentService {
     }
   }
 
-  private convertPaymentResultCode(resultCode: PaymentOutcome): string {
-    switch (resultCode) {
-      case PaymentOutcome.AUTHORIZED:
-        return TransactionStates.SUCCESS;
-      case PaymentOutcome.REJECTED:
-        return TransactionStates.FAILURE;
-      default:
-        return TransactionStates.INITIAL;
-    }
-  }
-
   private convertCreatePaymentIntentRequest(
     cart: Cart,
     payment: Payment,
@@ -388,7 +482,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
     payload: CreateOrderRequestDTO,
   ): CreateOrderRequest {
     const futureOrderNumber = getFutureOrderNumberFromContext();
-    const shipingAddress = paymentSDK.ctCartService.getOneShippingAddress({ cart });
+    const shippingAddress = paymentSDK.ctCartService.getOneShippingAddress({ cart });
 
     return {
       ...payload,
@@ -400,7 +494,7 @@ export class PaypalPaymentService extends AbstractPaymentService {
             currency_code: amount.currencyCode,
             value: convertCoCoAmountToPayPalAmount(amount, payment.amountPlanned.fractionDigits),
           },
-          shipping: this.convertShippingAddress(shipingAddress),
+          shipping: this.convertShippingAddress(shippingAddress),
           ...(futureOrderNumber && { custom_id: futureOrderNumber }),
         },
       ],
@@ -484,19 +578,4 @@ export class PaypalPaymentService extends AbstractPaymentService {
       });
     }
   }
-
-  // private convertCaptureOrderStatus(data: any): PaymentModificationStatus {
-  //   if (data?.status) {
-  //     const result = data.status as string;
-  //     if (result.toUpperCase() === 'COMPLETED') {
-  //       return PaymentModificationStatus.APPROVED;
-  //     } else {
-  //       return PaymentModificationStatus.REJECTED;
-  //     }
-  //   } else {
-  //     throw new ErrorGeneral(undefined, {
-  //       privateMessage: 'capture status not received.',
-  //     });
-  //   }
-  // }
 }
