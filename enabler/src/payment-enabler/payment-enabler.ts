@@ -17,7 +17,7 @@ export interface PaymentComponent {
 
 export interface PaymentComponentBuilder {
   componentHasSubmit: boolean;
-  build(config: ComponentOptions): Promise<PaymentComponent>;
+  build(config: ComponentOptions): PaymentComponent;
 }
 
 export type EnablerOptions = {

@@ -35,7 +35,7 @@ export abstract class PaypalBaseComponentBuilder
     this.baseOptions = baseOptions;
   }
 
-  async build(config: ComponentOptions): Promise<PaymentComponent> {
+  build(config: ComponentOptions): PaymentComponent {
     const component = new DefaultPaypalComponent(
       this.paymentMethod,
       this.baseOptions,
