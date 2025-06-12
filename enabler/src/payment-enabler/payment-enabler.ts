@@ -1,15 +1,17 @@
+type CardPaymentState = {
+  card?: {
+    endDigits?: string;
+    brand?: string;
+    expiryDate?: string;
+  }
+}
+
 export interface PaymentComponent {
-  mount(selector: string): void;
-  submit(): void;
-  showValidation?(): void;
-  isValid?(): boolean;
-  getState?(): {
-    card?: {
-      endDigits?: string;
-      brand?: string;
-      expiryDate?: string;
-    }
-  };
+  mount(selector: string): Promise<void>;
+  submit(): Promise<void>;
+  showValidation?(): Promise<void>;
+  isValid?(): Promise<boolean>;
+  getState?(): Promise<CardPaymentState>;
   isAvailable?(): Promise<boolean>;
 }
 
