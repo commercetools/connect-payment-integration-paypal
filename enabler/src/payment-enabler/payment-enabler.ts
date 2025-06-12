@@ -1,7 +1,7 @@
 export interface PaymentComponent {
-  mount(selector: string): void;
-  submit(): void;
-  showValidation?(): void;
+  mount(selector: string): Promise<void> | void;
+  submit(): Promise<void> | void;
+  showValidation?(): Promise<void> | void;
   isValid?(): boolean;
   getState?(): {
     card?: {
