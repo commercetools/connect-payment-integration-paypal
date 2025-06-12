@@ -16,7 +16,7 @@ export class PaypalBuilder extends PaypalBaseComponentBuilder {
     super(PaymentMethod.paypal, baseOptions);
   }
 
-  build(config: ComponentOptions): PaymentComponent {
+  async build(config: ComponentOptions): Promise<PaymentComponent> {
     const paypalComponent = new PaypalComponent(
       this.paymentMethod,
       this.baseOptions,

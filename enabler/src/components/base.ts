@@ -35,7 +35,7 @@ export abstract class PaypalBaseComponentBuilder
     this.baseOptions = baseOptions;
   }
 
-  build(config: ComponentOptions): PaymentComponent {
+  async build(config: ComponentOptions): Promise<PaymentComponent> {
     const component = new DefaultPaypalComponent(
       this.paymentMethod,
       this.baseOptions,
@@ -67,11 +67,11 @@ export class DefaultPaypalComponent implements PaymentComponent {
     this.component = this.baseOptions.sdk.Buttons({});
   }
 
-  submit(): void {
+  async submit(): Promise<void> {
     return;
   }
 
-  mount(selector: string): void {
+  async mount(selector: string): Promise<void> {
     this.component.render(selector);
   }
 
