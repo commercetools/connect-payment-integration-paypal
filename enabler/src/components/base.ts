@@ -67,11 +67,11 @@ export class DefaultPaypalComponent implements PaymentComponent {
     this.component = this.baseOptions.sdk.Buttons({});
   }
 
-  submit(): void {
+  async submit(): Promise<void> {
     return;
   }
 
-  mount(selector: string): void {
+  async mount(selector: string): Promise<void> {
     this.component.render(selector);
   }
 
