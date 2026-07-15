@@ -47,7 +47,7 @@ export abstract class PaypalBaseComponentBuilder
 }
 
 export class DefaultPaypalComponent implements PaymentComponent {
-  protected component: PayPalButtonsComponent;
+  protected component!: PayPalButtonsComponent;
   protected paymentMethod: PaymentMethod;
   protected baseOptions: BaseOptions;
   protected componentOptions: ComponentOptions;
@@ -64,7 +64,7 @@ export class DefaultPaypalComponent implements PaymentComponent {
   }
 
   init() {
-    this.component = this.baseOptions.sdk.Buttons({});
+    this.component = this.baseOptions.sdk.Buttons!({});
   }
 
   async submit(): Promise<void> {

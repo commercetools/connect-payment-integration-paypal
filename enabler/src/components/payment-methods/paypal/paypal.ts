@@ -37,7 +37,7 @@ export class PaypalComponent extends DefaultPaypalComponent {
   }
 
   init() {
-    this.component = this.baseOptions.sdk.Buttons({
+    this.component = this.baseOptions.sdk.Buttons!({
       style: {
         height: 40,
         label: "buynow",
@@ -52,10 +52,10 @@ export class PaypalComponent extends DefaultPaypalComponent {
         return actions.resolve();
       },
       onCancel: () => {
-        this.baseOptions.onError("Payment cancelled by user");
+        this.baseOptions.onError!("Payment cancelled by user");
       },
       onError: (err) => {
-        this.baseOptions.onError(err);
+        this.baseOptions.onError!(err);
       },
       createOrder: async (): Promise<string> => {
         try {
@@ -99,8 +99,10 @@ export class PaypalComponent extends DefaultPaypalComponent {
           if (data.id) {
             return data.id;
           }
+          throw new Error("Order ID not found in response");
         } catch (err) {
-          this.baseOptions.onError(err);
+          this.baseOptions.onError!(err);
+          throw err;
         }
       },
       onApprove: async (data, actions): Promise<void> => {
@@ -139,12 +141,12 @@ export class PaypalComponent extends DefaultPaypalComponent {
             throw new Error("payment declined");
           }
 
-          this.baseOptions.onComplete({
+          this.baseOptions.onComplete!({
             paymentReference: orderData?.paymentReference,
             isSuccess: orderData?.captureStatus === "COMPLETED",
           });
         } catch (err) {
-          this.baseOptions.onError(err);
+          this.baseOptions.onError!(err);
         }
       },
     });

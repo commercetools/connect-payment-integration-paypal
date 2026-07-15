@@ -47,5 +47,5 @@ export interface PaymentEnabler {
   /** 
    * @throws {Error}
    */
-  createComponentBuilder: (type: string) => Promise<PaymentComponent | never>
+  createComponentBuilder: (type: string) => Promise<PaymentComponentBuilder | never>
 }
