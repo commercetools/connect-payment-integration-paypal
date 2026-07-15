@@ -21,7 +21,7 @@
     "ts-jest": "^29.4.11",
     "typescript": "5.9.3",
     "vite": "8.1.4",
-    "vite-plugin-css-injected-by-js": "4.0.1"
+    "vite-plugin-css-injected-by-js": "5.0.1"
   },
   "overrides": {
     "path-to-regexp": "3.3.0",
