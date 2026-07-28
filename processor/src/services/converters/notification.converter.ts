@@ -1,5 +1,5 @@
 import { ErrorGeneral, TransactionData, UpdatePayment } from '@commercetools/connect-payments-sdk';
-import { TransactionStates, TransactionTypes, NotificationEventType } from '../types/paypal-payment.type';
+import { NotificationEventType, TransactionStates, TransactionTypes } from '../types/paypal-payment.type';
 import { NotificationPayloadDTO } from '../../dtos/paypal-payment.dto';
 import { convertPayPalAmountToCoCoAmount } from './amount.converter';
 

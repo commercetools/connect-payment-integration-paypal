@@ -1,4 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function postDeploy(properties: any) {
   if (properties) {
     // TODO: Implement postDeploy scripts if any

@@ -1,5 +1,4 @@
 export interface IPaypalPaymentAPI {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   healthCheck(): Promise<any>;
 }
 
@@ -123,7 +122,6 @@ export type NotificationVerificationRequest = {
   transmission_sig: string;
   transmission_time: string;
   webhook_id: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   webhook_event: Record<string, any>;
 };
 
