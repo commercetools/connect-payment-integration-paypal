@@ -1,17 +1,17 @@
 import {
-  ErrorGeneral,
-  healthCheckCommercetoolsPermissions,
-  statusHandler,
   Address,
   Cart,
+  ErrorGeneral,
+  ErrorInvalidOperation,
+  healthCheckCommercetoolsPermissions,
   Money,
   Payment,
-  ErrorInvalidOperation,
+  statusHandler,
 } from '@commercetools/connect-payments-sdk';
 import {
+  CaptureOrderResponseDTO,
   CreateOrderRequestDTO,
   CreateOrderResponseDTO,
-  CaptureOrderResponseDTO,
   NotificationPayloadDTO,
 } from '../dtos/paypal-payment.dto';
 
@@ -32,9 +32,9 @@ import {
 import { AmountSchemaDTO, PaymentModificationStatus } from '../dtos/operations/payment-intents.dto';
 import { randomUUID } from 'crypto';
 import {
-  TransactionStates,
   OrderConfirmation,
   PaypalPaymentServiceOptions,
+  TransactionStates,
   TransactionTypes,
 } from './types/paypal-payment.type';
 import { getConfig } from '../config/config';

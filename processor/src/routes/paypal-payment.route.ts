@@ -1,15 +1,15 @@
 import { SessionHeaderAuthenticationHook } from '@commercetools/connect-payments-sdk';
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import {
+  CaptureOrderParamsDTO,
+  CaptureOrderResponse,
+  CaptureOrderResponseDTO,
   CreateOrderRequestDTO,
   CreateOrderResponseDTO,
-  CaptureOrderResponseDTO,
-  CaptureOrderParamsDTO,
+  NotificationPayload,
+  NotificationPayloadDTO,
   OrderRequest,
   OrderResponse,
-  CaptureOrderResponse,
-  NotificationPayloadDTO,
-  NotificationPayload,
 } from '../dtos/paypal-payment.dto';
 import { PaypalPaymentService } from '../services/paypal-payment.service';
 import { WebhookVerificationHook } from '../libs/fastify/hooks/paypal-webhook-verification';

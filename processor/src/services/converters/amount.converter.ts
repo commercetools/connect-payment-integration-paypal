@@ -1,4 +1,4 @@
-import { Money, CurrencyConverters, ErrorGeneral } from '@commercetools/connect-payments-sdk';
+import { CurrencyConverters, ErrorGeneral, Money } from '@commercetools/connect-payments-sdk';
 import { Amount } from '../../clients/types/paypal.client.type';
 
 export const convertCoCoAmountToPayPalAmount = (amountToConvert: Money, fractionDigits: number): string => {
