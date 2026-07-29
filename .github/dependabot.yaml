@@ -9,6 +9,13 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      # Keep @types/node on the same major as the Node runtime (24.x, see .nvmrc).
+      # Grouping above only covers minor/patch, so majors still arrive as their
+      # own PRs - that is how @types/node previously drifted to 26.x.
+      - dependency-name: "@types/node"
+        update-types:
+          - "version-update:semver-major"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
@@ -21,6 +28,11 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      # Keep @types/node on the same major as the Node runtime (24.x, see .nvmrc).
+      - dependency-name: "@types/node"
+        update-types:
+          - "version-update:semver-major"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
