@@ -58,6 +58,10 @@ export class PaypalPaymentEnabler implements PaymentEnabler {
         currency: configJson.currency,
       });
 
+      if (!paypalCheckout) {
+        throw new Error("PaypalPaymentEnabler failed to load the PayPal SDK");
+      }
+
       return {
         baseOptions: {
           sdk: paypalCheckout,
@@ -89,6 +93,8 @@ export class PaypalPaymentEnabler implements PaymentEnabler {
         ).join(", ")}`
       );
     }
-    return new supportedMethods[type](setupData.baseOptions);
+    // Guarded above, so the cast is safe.
+    const method = type as keyof typeof supportedMethods;
+    return new supportedMethods[method](setupData.baseOptions);
   }
 }

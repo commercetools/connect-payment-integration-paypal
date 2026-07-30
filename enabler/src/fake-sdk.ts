@@ -1,6 +1,6 @@
 export class FakeSdk {
   private environment: string;
-  constructor({ environment }) {
+  constructor({ environment }: { environment: string }) {
     this.environment = environment;
     console.log('FakeSdk constructor', this.environment);
   }

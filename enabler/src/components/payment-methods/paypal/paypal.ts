@@ -37,7 +37,7 @@ export class PaypalComponent extends DefaultPaypalComponent {
   }
 
   init() {
-    this.component = this.baseOptions.sdk.Buttons({
+    this.component = this.buttons({
       style: {
         height: 40,
         label: "buynow",
@@ -99,8 +99,13 @@ export class PaypalComponent extends DefaultPaypalComponent {
           if (data.id) {
             return data.id;
           }
+
+          throw new Error("PayPal order response did not include an order id");
         } catch (err) {
           this.baseOptions.onError(err);
+          // The SDK requires an order id here, so surface the failure instead
+          // of resolving with undefined.
+          throw err;
         }
       },
       onApprove: async (data, actions): Promise<void> => {

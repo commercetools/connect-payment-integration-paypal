@@ -1,4 +1,8 @@
-import { PayPalButtonsComponent, PayPalNamespace } from "@paypal/paypal-js";
+import {
+  PayPalButtonsComponent,
+  PayPalButtonsComponentOptions,
+  PayPalNamespace,
+} from "@paypal/paypal-js";
 import {
   ComponentOptions,
   PaymentComponent,
@@ -15,8 +19,10 @@ export type BaseOptions = {
   sdk: PayPalNamespace;
   processorUrl: string;
   sessionId: string;
-  onComplete?: (result: PaymentResult) => void;
-  onError?: (error: any) => void;
+  // The enabler always falls back to its own default handlers, so components
+  // can rely on these being present.
+  onComplete: (result: PaymentResult) => void;
+  onError: (error: any) => void;
 };
 
 /**
@@ -47,7 +53,8 @@ export abstract class PaypalBaseComponentBuilder
 }
 
 export class DefaultPaypalComponent implements PaymentComponent {
-  protected component: PayPalButtonsComponent;
+  // Assigned in init(), which the builder calls immediately after construction.
+  protected component!: PayPalButtonsComponent;
   protected paymentMethod: PaymentMethod;
   protected baseOptions: BaseOptions;
   protected componentOptions: ComponentOptions;
@@ -64,7 +71,20 @@ export class DefaultPaypalComponent implements PaymentComponent {
   }
 
   init() {
-    this.component = this.baseOptions.sdk.Buttons({});
+    this.component = this.buttons({});
+  }
+
+  /**
+   * The SDK only exposes Buttons when that component was loaded, so resolve it
+   * once here rather than asserting at each call site.
+   */
+  protected buttons(
+    options: PayPalButtonsComponentOptions
+  ): PayPalButtonsComponent {
+    if (!this.baseOptions.sdk.Buttons) {
+      throw new Error("PayPal SDK did not load the Buttons component");
+    }
+    return this.baseOptions.sdk.Buttons(options);
   }
 
   async submit(): Promise<void> {
