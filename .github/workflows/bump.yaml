@@ -37,17 +37,13 @@ jobs:
           npm ci --prefix processor
           npm version --prefix processor ${{ inputs.BUMP_TYPE }}
 
-      - name: Commit changes
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add .
-          git commit -m 'chore: bump version'
-
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          # Commits are created through the GitHub API so they are signed as
+          # `github-actions[bot]` and show up as "Verified".
+          sign-commits: true
           commit-message: "chore: bump version"
           branch: "bump-version-branch"
           title: "Bump version"
