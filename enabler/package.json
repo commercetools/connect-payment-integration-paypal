@@ -15,7 +15,7 @@
     "serve": "npm run build && serve public -l 3000 --cors"
   },
   "dependencies": {
-    "@paypal/paypal-js": "10.1.0",
+    "@paypal/paypal-js": "11.0.0",
     "serve": "14.2.6"
   },
   "devDependencies": {
