@@ -2,16 +2,10 @@ version: "3.8"
 
 services:
   jwt-server:
-    image: node:24-alpine
+    build: ./docker-dev/jwt-mock
     restart: always
-    command: 
-      - npx
-      - --package
-      - jwt-mock-server
-      - -y
-      - start
     ports:
-      - 9002:9000
+      - 9002:9002
 
   enabler:
     image: node:24
