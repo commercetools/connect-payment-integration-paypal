@@ -31,7 +31,7 @@
     "@fastify/formbody": "9.0.0",
     "@fastify/http-proxy": "11.6.2",
     "@fastify/request-context": "7.0.0",
-    "@fastify/static": "10.1.4",
+    "@fastify/static": "10.1.11",
     "@fastify/type-provider-typebox": "6.1.0",
     "@sinclair/typebox": "0.33.24",
     "dotenv": "17.4.2",
@@ -62,15 +62,18 @@
   },
   "overrides": {
     "path-to-regexp": "3.3.0",
-    "test-exclude": "^8.0.0",
+    "test-exclude": {
+      ".": "^8.0.0",
+      "glob": "^14.0.2"
+    },
     "@jest/reporters": {
-      "glob": "^13.0.6"
+      "glob": "^14.0.2"
     },
     "jest-config": {
-      "glob": "^13.0.6"
+      "glob": "^14.0.2"
     },
     "jest-runtime": {
-      "glob": "^13.0.6"
+      "glob": "^14.0.2"
     },
     "minimatch@10": {
       "brace-expansion": "5.0.9"
